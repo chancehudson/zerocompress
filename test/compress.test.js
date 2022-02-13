@@ -26,18 +26,18 @@ describe('decompressor', () => {
     const v2 = 150
     const eq = true
     {
-      const [data, uniques] = compressSingle(receiverIndex, 1, [ v1, v2, eq ], ['uint', 'uint', 'bool'])
-      const tx = await decompressor.decompressSingleBitCall(data, uniques)
+      const data = compressSingle(receiverIndex, 1, [ v1, v2, eq ], ['uint', 'uint', 'bool'])
+      const tx = await decompressor.decompressSingleBitCall(data)
       await tx.wait()
     }
     {
       const tx = await test.testMethod1(v1, v2, eq)
       await tx.wait()
     }
-    const bytes = '0x0000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20'
+    const bytes = '0x000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20'
     {
-      const [data, uniques] = compressSingle(receiverIndex, 2, [ bytes ], ['bytes'])
-      const tx = await decompressor.decompressSingleBitCall(data, uniques)
+      const data = compressSingle(receiverIndex, 2, [ bytes ], ['bytes'])
+      const tx = await decompressor.decompressSingleBitCall(data)
       await tx.wait()
     }
     {

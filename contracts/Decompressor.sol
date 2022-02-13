@@ -17,8 +17,7 @@ contract Decompressor is IDecompressReceiver {
   function callMethod(uint8 method, bytes memory data) external override {
     if (method == uint8(0)) {
       // decompressSingleBitCall
-      (bytes memory _data, bytes memory uniques) = abi.decode(data, (bytes, bytes));
-      this.decompressSingleBitCall(_data, uniques);
+      this.decompressSingleBitCall(data);
     } else if (method == uint8(1)) {
       // decompressDoubleBitCall
       (bytes memory _data, bytes memory uniques) = abi.decode(data, (bytes, bytes));
@@ -34,15 +33,34 @@ contract Decompressor is IDecompressReceiver {
     receivers[latestReceiver++] = receiver;
   }
 
+  function unwrap(bytes memory d) internal pure returns (uint24, uint8, bytes memory) {
+    bytes memory b = new bytes(d.length - 4);
+    uint24 receiver = uint24(uint8(d[0]) ** 2**2) + uint24(uint8(d[1]) ** 2) + uint24(uint8(d[2]));
+    uint8 method = uint8(d[3]);
+    uint words = (d.length - 4) / 32;
+    uint remaining = (d.length - 4) % 32;
+    bytes32 w;
+    for (uint x; x < words; x++) {
+      assembly {
+        w := mload(add(add(d, 36), mul(32, x)))
+        mstore(add(b, add(32, mul(x, 32))), w)
+      }
+    }
+    uint start = 4 + words * 32;
+    for (uint x = start; x < start + remaining; x++) {
+      b[x - 4] = d[x];
+    }
+    return (receiver, method, b);
+  }
+
   /**
    * Decompress and pass the data to a contract
    **/
   function decompressSingleBitCall(
-    bytes memory data,
-    bytes memory uniques
+    bytes memory data
   ) public {
-    bytes memory finalData = decompressSingleBit(data, uniques);
-    (uint24 receiver, uint8 method, bytes memory d) = abi.decode(finalData, (uint24, uint8, bytes));
+    bytes memory finalData = decompressSingleBit(data);
+    (uint24 receiver, uint8 method, bytes memory d) = unwrap(finalData);
     require(receivers[receiver] != address(0));
     // now pass the finalData to another function
     IDecompressReceiver(receivers[receiver]).callMethod(method, d);
@@ -57,7 +75,7 @@ contract Decompressor is IDecompressReceiver {
     bytes32[2] memory repeats
   ) public {
     bytes memory finalData = decompressDoubleBit(data, uniques, repeats);
-    (uint24 receiver, uint8 method, bytes memory d) = abi.decode(finalData, (uint24, uint8, bytes));
+    (uint24 receiver, uint8 method, bytes memory d) = unwrap(finalData);
     require(receivers[receiver] != address(0));
     // now pass the finalData to another function
     IDecompressReceiver(receivers[receiver]).callMethod(method, d);
@@ -68,8 +86,7 @@ contract Decompressor is IDecompressReceiver {
    * A 1 bit indicates a unique byte
    **/
   function decompressSingleBit(
-    bytes memory data,
-    bytes memory uniques
+    bytes memory data
   ) public pure returns (bytes memory) {
     uint8[8] memory masks;
     masks[0] = 1;
@@ -83,9 +100,14 @@ contract Decompressor is IDecompressReceiver {
     bytes memory finalData = new bytes(data.length * 8);
     uint48 latestUnique = 0;
 
+    // take a 24 bit uint off the front of the data
+    uint24 dataLength = uint24(uint8(data[0]) ** 2**2) + uint24(uint8(data[1]) ** 2) + uint24(uint8(data[2]));
+    uint48 uniqueStart = 3 + dataLength;
+
     // 1 bits per item
     // do an AND then shift
-    for (uint48 x; x < data.length; x++) {
+    // start at a 3 byte offset
+    for (uint48 x = 3; x < dataLength + 3; x++) {
       // all zeroes in this byte, skip it
       if (uint8(data[x]) == 0) continue;
       for (uint8 y; y < 8; y++) {
@@ -94,7 +116,7 @@ contract Decompressor is IDecompressReceiver {
         uint8 thisVal = uint8(data[x] & bytes1(masks[y])) / masks[y];
         // if non-zero add the unique value
         if (thisVal == 1) {
-          finalData[8*x+y] = uniques[latestUnique++];
+          finalData[8*(x - 3)+y] = data[uniqueStart + latestUnique++];
         }
       }
     }

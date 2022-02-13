@@ -12,7 +12,7 @@ module.exports = {
  * @param number method - The method to invoke in the receiving contract
  * @param object data - The arguments to be passed to the receiving contract
  * @param object functionForm - ABI format for encoding the data
- * @returns Two bytes arrays that can be used as arguments for the decompressor
+ * @returns A bytes array that can be used as an argument for the decompressor
  **/
 function compressSingle(receiver, method, data, functionFormat) {
   const calldata = encodeCalldata(receiver, method, data, functionFormat)
@@ -40,9 +40,12 @@ function compressSingle(receiver, method, data, functionFormat) {
     ).toString(16)
     bytes.push(byte.length === 1 ? `0${byte}` : byte)
   }
-  const _data = '0x' + bytes.join('')
-  const uniqueData = '0x' + uniqueBytes.join('')
-  return [_data, uniqueData]
+  const _data = bytes.join('')
+  const uniqueData = uniqueBytes.join('')
+  // now store a length identifier in a uint24, supports a length of 16 MB
+  const lengthBytes = new BN(_data.length / 2).toString(16, 6)
+  const finalData = `0x${lengthBytes}${_data}${uniqueData}`
+  return finalData
 }
 
 function compressDouble(receiver, method, data, functionFormat) {
@@ -77,21 +80,21 @@ function compressDouble(receiver, method, data, functionFormat) {
   return [_data, uniqueData]
 }
 
-function compressRepeats(receiver, method, data, functionFormat) {
-  const calldata = encodeCalldata(receiver, method, data, functionFormat)
-}
-
 function encodeCalldata(receiver, method, data, functionFormat) {
   const functionData = ethers.utils.defaultAbiCoder.encode(
     Array.isArray(functionFormat) ? functionFormat : [functionFormat],
     Array.isArray(data) ? data : [data],
   )
-  return ethers.utils.defaultAbiCoder.encode(
-    ['uint24', 'uint8', 'bytes'],
-    [
-      receiver,
-      method,
-      functionData,
-    ]
-  )
+  // manually tightly pack these integers
+  // 3 bytes for the receiver
+  const _receiver = new BN(receiver).toString(16, 6)
+  // 1 byte for the method
+  const _method = new BN(method).toString(16, 2)
+  return `0x${_receiver}${_method}${functionData.replace('0x', '')}`
+  // return ethers.utils.defaultAbiCoder.encode(
+  //   ['bytes'],
+  //   [
+  //     finalData,
+  //   ]
+  // )
 }
