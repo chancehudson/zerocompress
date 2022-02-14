@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/IDecompressReceiver.sol";
 
 contract Test is IDecompressReceiver {
-  uint sum = 300;
+  uint constant sum = 300;
   bool wasEqual = false;
 
 
@@ -16,8 +16,8 @@ contract Test is IDecompressReceiver {
       (uint v1, uint v2, bool eq) = abi.decode(data, (uint, uint, bool));
       this.testMethod1(v1, v2, eq);
     } else if (method == uint8(2)) {
-      (bytes memory b) = abi.decode(data, (bytes));
-      this.testMethod2(b);
+      (bytes memory b, bytes32 h) = abi.decode(data, (bytes, bytes32));
+      this.testMethod2(b, h);
     } else {
       revert('unknown');
     }
@@ -26,14 +26,11 @@ contract Test is IDecompressReceiver {
   function testMethod1(uint v1, uint v2, bool eq) public {
     require((v1 == v2) == eq, 't1');
     require(v1+v2 == sum, 't2');
-    wasEqual = v1 == v2;
+    wasEqual = v1 == v2; // just to suppress the state mutability warning
   }
 
-  function testMethod2(bytes calldata b) public {
-    uint _sum;
-    for (uint x; x < b.length; x++) {
-      _sum += uint8(b[x]);
-    }
-    sum = _sum;
+  function testMethod2(bytes calldata b, bytes32 h) public {
+    require(keccak256(b) == h);
+    wasEqual = !wasEqual; // just to suppress the state mutability warning
   }
 }

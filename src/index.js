@@ -81,10 +81,10 @@ function compressDouble(receiver, method, data, functionFormat) {
 }
 
 function encodeCalldata(receiver, method, data, functionFormat) {
-  const functionData = ethers.utils.defaultAbiCoder.encode(
+  const functionData = functionFormat ? ethers.utils.defaultAbiCoder.encode(
     Array.isArray(functionFormat) ? functionFormat : [functionFormat],
     Array.isArray(data) ? data : [data],
-  )
+  ) : data
   // manually tightly pack these integers
   // 3 bytes for the receiver
   const _receiver = new BN(receiver).toString(16, 6)
