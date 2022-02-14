@@ -20,9 +20,7 @@ contract Decompressor is IDecompressReceiver {
       this.decompressSingleBitCall(data);
     } else if (method == uint8(1)) {
       // decompressDoubleBitCall
-      (bytes memory _data, bytes memory uniques) = abi.decode(data, (bytes, bytes));
-      bytes32[2] memory b;
-      this.decompressDoubleBitCall(_data, uniques, b);
+      this.decompressDoubleBitCall(data);
     } else {
       revert('unknown method');
     }
@@ -70,11 +68,9 @@ contract Decompressor is IDecompressReceiver {
    * Decompress double bit encoding and pass the data to a contract
    **/
   function decompressDoubleBitCall(
-    bytes memory data,
-    bytes memory uniques,
-    bytes32[2] memory repeats
+    bytes memory data
   ) public {
-    bytes memory finalData = decompressDoubleBit(data, uniques, repeats);
+    bytes memory finalData = decompressDoubleBitZero(data);
     (uint24 receiver, uint8 method, bytes memory d) = unwrap(finalData);
     require(receivers[receiver] != address(0));
     // now pass the finalData to another function
@@ -118,6 +114,68 @@ contract Decompressor is IDecompressReceiver {
         if (thisVal == 1) {
           finalData[8*(x - 3)+y] = data[uniqueStart + latestUnique++];
         }
+      }
+    }
+    return finalData;
+  }
+
+  function decompressDoubleBitZero(
+    bytes memory data
+  ) public view returns (bytes memory) {
+    uint8[4] memory masks;
+    // 11000000 = 3
+    // 00110000 = 12
+    // 00001100 = 48
+    // 00000011 = 192
+    masks[0] = 3;
+    masks[1] = 12;
+    masks[2] = 48;
+    masks[3] = 192;
+
+    // take a 24 bit uint off the front of the data
+    uint24 dataLength = uint24(uint8(data[0]) ** 2**2) + uint24(uint8(data[1]) ** 2) + uint24(uint8(data[2]));
+    uint48 uniqueStart = 3 + dataLength;
+    // take the final 2 bytes as the 0 length indicators
+    uint8 zeroCount1 = uint8(data[data.length - 2]);
+    uint8 zeroCount2 = uint8(data[data.length - 1]);
+    uint8[] memory vals = new uint8[](dataLength * 4);
+    uint48 finalLength = 0;
+
+    // 1 bits per item
+    // do an AND then shift
+    // start at a 3 byte offset
+    for (uint48 x = 3; x < dataLength + 3; x++) {
+      // all zeroes in this byte, skip it
+      if (uint8(data[x]) == 0) continue;
+      for (uint8 y; y < 4; y++) {
+        // take the current bit and convert it to a uint8
+        // use exponentiation to bit shift
+        uint8 thisVal = uint8(data[x] & bytes1(masks[y])) / uint8(2) ** (y*2);
+        vals[4*(x - 3)+y] = thisVal;
+        // if non-zero add the unique value
+        if (thisVal <= 1) {
+          finalLength += 1;
+        } else if (thisVal == 2) {
+          finalLength += zeroCount1;
+        } else if (thisVal == 3) {
+          finalLength += zeroCount2;
+        }
+      }
+    }
+    bytes memory finalData = new bytes(finalLength);
+    uint48 latestUnique = 0;
+    uint48 offset = 0;
+    for (uint48 x; x < vals.length; x++) {
+      // all zeroes in this byte, skip it
+      if (vals[x] == 0) {
+        offset += 1;
+      } else if (vals[x] == 1) {
+        finalData[offset] = data[uniqueStart + latestUnique++];
+        offset += 1;
+      } else if (vals[x] == 2 && zeroCount1 > 0) {
+        offset += zeroCount1;
+      } else if (vals[x] == 3 && zeroCount2 > 0) {
+        offset += zeroCount2;
       }
     }
     return finalData;
