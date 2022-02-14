@@ -35,7 +35,7 @@ Currently values 2 and 3 are used to insert a fixed number of zero bytes. This c
 Implement the IDecompressReceiver protocol and register each receiver with the decompressor contract.
 
 ```js
-import "./interfaces/IDecompressReceiver.sol";
+import "zerocompress/contracts/interfaces/IDecompressReceiver.sol";
 
 contract Example is IDecompressReceiver {
   function callMethod(uint8 method, bytes memory data) external override {
