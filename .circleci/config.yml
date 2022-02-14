@@ -1,0 +1,30 @@
+version: 2.1
+workflows:
+  test_app:
+    jobs:
+      # - lint
+      - test_contracts
+
+jobs:
+  # lint:
+  #   machine:
+  #     image: ubuntu-2004:202010-01
+  #   steps:
+  #     - checkout
+  #     - run:
+  #         name: Install
+  #         command: npm ci
+  #     - run:
+  #         name: Lint
+  #         command: npm run lint:check
+  test_contracts:
+    machine:
+      image: ubuntu-2004:202010-01
+    steps:
+      - checkout
+      - run:
+          name: Install
+          command: npm ci
+      - run:
+          name: Test
+          command: npm test
