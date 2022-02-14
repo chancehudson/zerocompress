@@ -33,7 +33,7 @@ contract Decompressor is IDecompressReceiver {
 
   function unwrap(bytes memory d) internal pure returns (uint24, uint8, bytes memory) {
     bytes memory b = new bytes(d.length - 4);
-    uint24 receiver = uint24(uint8(d[0]) ** 2**2) + uint24(uint8(d[1]) ** 2) + uint24(uint8(d[2]));
+    uint24 receiver = uint24(uint8(d[0]) * 2 ** 16) + uint24(uint8(d[1]) * 2 ** 8) + uint24(uint8(d[2]));
     uint8 method = uint8(d[3]);
     uint words = (d.length - 4) / 32;
     uint remaining = (d.length - 4) % 32;
@@ -93,26 +93,29 @@ contract Decompressor is IDecompressReceiver {
     masks[5] = 32;
     masks[6] = 64;
     masks[7] = 128;
-    bytes memory finalData = new bytes(data.length * 8);
-    uint48 latestUnique = 0;
 
     // take a 24 bit uint off the front of the data
-    uint24 dataLength = uint24(uint8(data[0]) ** 2**2) + uint24(uint8(data[1]) ** 2) + uint24(uint8(data[2]));
-    uint48 uniqueStart = 3 + dataLength;
+    uint24 dataLength = uint24(uint8(data[0]) * 2 ** 16) + uint24(uint8(data[1]) * 2 ** 8) + uint24(uint8(data[2]));
+    uint16 finalLength = uint16(uint16(uint8(data[3])) * 2 ** 8) + uint16(uint8(data[4]));
+    uint48 uniqueStart = 5 + dataLength;
+    bytes memory finalData = new bytes(finalLength);
 
+    uint48 latestUnique = 0;
     // 1 bits per item
     // do an AND then shift
     // start at a 3 byte offset
-    for (uint48 x = 3; x < dataLength + 3; x++) {
+    uint8 offset = 5;
+    for (uint48 x = offset; x < dataLength + offset; x++) {
       // all zeroes in this byte, skip it
-      if (uint8(data[x]) == 0) continue;
+      /* if (uint8(data[x]) == type(uint8).max) continue; */
       for (uint8 y; y < 8; y++) {
         // take the current bit and convert it to a uint8
         // use exponentiation to bit shift
         uint8 thisVal = uint8(data[x] & bytes1(masks[y])) / masks[y];
         // if non-zero add the unique value
+        if (8*(x-offset)+y >= finalLength) return finalData;
         if (thisVal == 1) {
-          finalData[8*(x - 3)+y] = data[uniqueStart + latestUnique++];
+          finalData[8*(x - offset)+y] = data[uniqueStart + latestUnique++];
         }
       }
     }
@@ -121,7 +124,7 @@ contract Decompressor is IDecompressReceiver {
 
   function decompressDoubleBitZero(
     bytes memory data
-  ) public view returns (bytes memory) {
+  ) public pure returns (bytes memory) {
     uint8[4] memory masks;
     // 11000000 = 3
     // 00110000 = 12
@@ -133,49 +136,37 @@ contract Decompressor is IDecompressReceiver {
     masks[3] = 192;
 
     // take a 24 bit uint off the front of the data
-    uint24 dataLength = uint24(uint8(data[0]) ** 2**2) + uint24(uint8(data[1]) ** 2) + uint24(uint8(data[2]));
-    uint48 uniqueStart = 3 + dataLength;
+    uint24 dataLength = uint24(uint8(data[0]) * 2 ** 16) + uint24(uint8(data[1]) * 2 ** 8) + uint24(uint8(data[2]));
+    uint16 finalLength = uint16(uint16(uint8(data[3])) * 2 ** 8) + uint16(uint8(data[4]));
+    uint48 uniqueStart = 5 + dataLength;
     // take the final 2 bytes as the 0 length indicators
-    uint8 zeroCount1 = uint8(data[data.length - 2]);
-    uint8 zeroCount2 = uint8(data[data.length - 1]);
-    uint8[] memory vals = new uint8[](dataLength * 4);
-    uint48 finalLength = 0;
 
+    bytes memory finalData = new bytes(finalLength);
+    uint48 latestUnique = 0;
     // 1 bits per item
     // do an AND then shift
     // start at a 3 byte offset
-    for (uint48 x = 3; x < dataLength + 3; x++) {
+    uint48 zeroOffset = 0;
+    for (uint48 x = 5; x < dataLength + 5; x++) {
       // all zeroes in this byte, skip it
       if (uint8(data[x]) == 0) continue;
       for (uint8 y; y < 4; y++) {
         // take the current bit and convert it to a uint8
         // use exponentiation to bit shift
+        if (zeroOffset >= finalLength) return finalData;
         uint8 thisVal = uint8(data[x] & bytes1(masks[y])) / uint8(2) ** (y*2);
-        vals[4*(x - 3)+y] = thisVal;
         // if non-zero add the unique value
-        if (thisVal <= 1) {
-          finalLength += 1;
+        if (thisVal == 0) {
+          zeroOffset++;
+        } else if (thisVal == 1) {
+          finalData[zeroOffset++] = data[uniqueStart + latestUnique++];
         } else if (thisVal == 2) {
-          finalLength += zeroCount1;
+          uint8 zeroCount1 = uint8(data[data.length - 2]);
+          zeroOffset += zeroCount1;
         } else if (thisVal == 3) {
-          finalLength += zeroCount2;
+          uint8 zeroCount2 = uint8(data[data.length - 1]);
+          zeroOffset += zeroCount2;
         }
-      }
-    }
-    bytes memory finalData = new bytes(finalLength);
-    uint48 latestUnique = 0;
-    uint48 offset = 0;
-    for (uint48 x; x < vals.length; x++) {
-      // all zeroes in this byte, skip it
-      if (vals[x] == 0) {
-        offset += 1;
-      } else if (vals[x] == 1) {
-        finalData[offset] = data[uniqueStart + latestUnique++];
-        offset += 1;
-      } else if (vals[x] == 2 && zeroCount1 > 0) {
-        offset += zeroCount1;
-      } else if (vals[x] == 3 && zeroCount2 > 0) {
-        offset += zeroCount2;
       }
     }
     return finalData;

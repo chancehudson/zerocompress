@@ -37,14 +37,15 @@ function compressSingle(receiver, method, data, functionFormat) {
     const byte = new BN(
       reverse(_compressedBits.slice(x * 8, x * 8 + 8)),
       2
-    ).toString(16)
-    bytes.push(byte.length === 1 ? `0${byte}` : byte)
+    ).toString(16, 2)
+    bytes.push(byte)
   }
   const _data = bytes.join('')
   const uniqueData = uniqueBytes.join('')
   // now store a length identifier in a uint24, supports a length of 16 MB
-  const lengthBytes = new BN(_data.length / 2).toString(16, 6)
-  const finalData = `0x${lengthBytes}${_data}${uniqueData}`
+  const dataLength = new BN(_data.length / 2).toString(16, 6)
+  const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
+  const finalData = `0x${dataLength}${finalLength}${_data}${uniqueData}`
   return finalData
 }
 
@@ -110,7 +111,8 @@ function compressDouble(receiver, method, data, functionFormat) {
   const bestSavingHex = new BN(bestSaving.length / 2).toString(16, 2)
   const secondBestSavingHex = new BN(secondBestSaving.length / 2).toString(16, 2)
   const lengthBytes = new BN(_data.length / 2).toString(16, 6)
-  const finalData = `0x${lengthBytes}${_data}${uniqueData}${bestSavingHex}${secondBestSavingHex}`
+  const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
+  const finalData = `0x${lengthBytes}${finalLength}${_data}${uniqueData}${bestSavingHex}${secondBestSavingHex}`
   return finalData
 }
 
