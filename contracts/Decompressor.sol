@@ -96,6 +96,7 @@ contract Decompressor is IDecompressReceiver {
 
     // take a 24 bit uint off the front of the data
     uint24 dataLength = uint24(uint8(data[0]) * 2 ** 16) + uint24(uint8(data[1]) * 2 ** 8) + uint24(uint8(data[2]));
+    // then a 16 bit uint after that
     uint16 finalLength = uint16(uint16(uint8(data[3])) * 2 ** 8) + uint16(uint8(data[4]));
     uint48 uniqueStart = 5 + dataLength;
     bytes memory finalData = new bytes(finalLength);
@@ -109,11 +110,11 @@ contract Decompressor is IDecompressReceiver {
       // all zeroes in this byte, skip it
       /* if (uint8(data[x]) == type(uint8).max) continue; */
       for (uint8 y; y < 8; y++) {
+        if (8*(x-offset)+y >= finalLength) return finalData;
         // take the current bit and convert it to a uint8
         // use exponentiation to bit shift
         uint8 thisVal = uint8(data[x] & bytes1(masks[y])) / masks[y];
         // if non-zero add the unique value
-        if (8*(x-offset)+y >= finalLength) return finalData;
         if (thisVal == 1) {
           finalData[8*(x - offset)+y] = data[uniqueStart + latestUnique++];
         }
@@ -137,9 +138,12 @@ contract Decompressor is IDecompressReceiver {
 
     // take a 24 bit uint off the front of the data
     uint24 dataLength = uint24(uint8(data[0]) * 2 ** 16) + uint24(uint8(data[1]) * 2 ** 8) + uint24(uint8(data[2]));
+    // then a 16 bit uint after that
     uint16 finalLength = uint16(uint16(uint8(data[3])) * 2 ** 8) + uint16(uint8(data[4]));
     uint48 uniqueStart = 5 + dataLength;
-    // take the final 2 bytes as the 0 length indicators
+
+    uint8 zeroCount1 = uint8(data[data.length - 2]);
+    uint8 zeroCount2 = uint8(data[data.length - 1]);
 
     bytes memory finalData = new bytes(finalLength);
     uint48 latestUnique = 0;
@@ -161,10 +165,8 @@ contract Decompressor is IDecompressReceiver {
         } else if (thisVal == 1) {
           finalData[zeroOffset++] = data[uniqueStart + latestUnique++];
         } else if (thisVal == 2) {
-          uint8 zeroCount1 = uint8(data[data.length - 2]);
           zeroOffset += zeroCount1;
         } else if (thisVal == 3) {
-          uint8 zeroCount2 = uint8(data[data.length - 1]);
           zeroOffset += zeroCount2;
         }
       }
