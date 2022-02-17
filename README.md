@@ -1,4 +1,4 @@
-# zerocompress [![CircleCI](https://img.shields.io/circleci/build/github/JChanceHud/zerocompress)](https://app.circleci.com/pipelines/github/JChanceHud/zerocompress?branch=main&filter=all)
+# zerocompress [![CircleCI](https://img.shields.io/circleci/build/github/vimwitch/zerocompress)](https://app.circleci.com/pipelines/github/vimwitch/zerocompress?branch=main&filter=all)
 
 Compress Ethereum calldata then decompress on chain. For use in L2 applications.
 
