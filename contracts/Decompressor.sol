@@ -55,7 +55,7 @@ contract Decompressor is IDecompressReceiver {
    * Decompress and pass the data to a contract
    **/
   function decompressSingleBitCall(
-    bytes memory data
+    bytes calldata data
   ) public {
     bytes memory finalData = decompressSingleBit(data);
     (uint24 receiver, uint8 method, bytes memory d) = unwrap(finalData);
@@ -68,7 +68,7 @@ contract Decompressor is IDecompressReceiver {
    * Decompress double bit encoding and pass the data to a contract
    **/
   function decompressDoubleBitCall(
-    bytes memory data
+    bytes calldata data
   ) public {
     bytes memory finalData = decompressDoubleBitZero(data);
     (uint24 receiver, uint8 method, bytes memory d) = unwrap(finalData);
@@ -82,7 +82,7 @@ contract Decompressor is IDecompressReceiver {
    * A 1 bit indicates a unique byte
    **/
   function decompressSingleBit(
-    bytes memory data
+    bytes calldata data
   ) public pure returns (bytes memory) {
     uint8[8] memory masks;
     masks[0] = 1;
@@ -124,7 +124,7 @@ contract Decompressor is IDecompressReceiver {
   }
 
   function decompressDoubleBitZero(
-    bytes memory data
+    bytes calldata data
   ) public pure returns (bytes memory) {
     uint8[4] memory masks;
     // 11000000 = 3
@@ -142,8 +142,9 @@ contract Decompressor is IDecompressReceiver {
     uint16 finalLength = uint16(uint16(uint8(data[3])) * 2 ** 8) + uint16(uint8(data[4]));
     uint48 uniqueStart = 5 + dataLength;
 
-    uint8 zeroCount1 = uint8(data[data.length - 2]);
-    uint8 zeroCount2 = uint8(data[data.length - 1]);
+    uint8[2] memory zeroCounts;
+    zeroCounts[0] = uint8(data[data.length - 2]);
+    zeroCounts[1] = uint8(data[data.length - 1]);
 
     bytes memory finalData = new bytes(finalLength);
     uint48 latestUnique = 0;
@@ -165,9 +166,9 @@ contract Decompressor is IDecompressReceiver {
         } else if (thisVal == 1) {
           finalData[zeroOffset++] = data[uniqueStart + latestUnique++];
         } else if (thisVal == 2) {
-          zeroOffset += zeroCount1;
+          zeroOffset += zeroCounts[0];
         } else if (thisVal == 3) {
-          zeroOffset += zeroCount2;
+          zeroOffset += zeroCounts[1];
         }
       }
     }
