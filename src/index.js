@@ -14,8 +14,7 @@ module.exports = {
  * @param object functionForm - ABI format for encoding the data
  * @returns A bytes array that can be used as an argument for the decompressor
  **/
-function compressSingle(method, data, functionFormat) {
-  const calldata = encodeCalldata(method, data, functionFormat)
+function compressSingle(calldata) {
   // now do single bit compression
   const rawData = calldata.replace('0x', '')
   const compressedBits = []
@@ -61,8 +60,7 @@ function compressSingle(method, data, functionFormat) {
   // return finalData
 }
 
-function compressDouble(method, data, functionFormat) {
-  const calldata = encodeCalldata(method, data, functionFormat)
+function compressDouble(calldata) {
   const bestSaving = findBestZeroRepeat(calldata)
   // now do single bit compression
   const _rawData = calldata.replace('0x', '')
@@ -126,19 +124,6 @@ function compressDouble(method, data, functionFormat) {
   const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
   const finalData = `0x${lengthBytes}${finalLength}${_data}${uniqueData}${bestSavingHex}${secondBestSavingHex}`
   return finalData
-}
-
-function encodeCalldata(method, data, functionFormat) {
-  const functionData = functionFormat ? ethers.utils.defaultAbiCoder.encode(
-    Array.isArray(functionFormat) ? functionFormat : [functionFormat],
-    Array.isArray(data) ? data : [data],
-  ) : data
-  // manually tightly pack these integers
-  // 3 bytes for the receiver
-  // const _receiver = new BN(receiver).toString(16, 6)
-  // 1 byte for the method
-  const _method = new BN(method).toString(16, 2)
-  return `0x${/*_receiver*/''}${_method}${functionData.replace('0x', '')}`
 }
 
 function findBestZeroRepeat(data) {

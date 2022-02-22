@@ -5,59 +5,27 @@ pragma experimental ABIEncoderV2;
 import "./Decompress.sol";
 
 contract Decompressor {
-  function callMethod(uint8 method, bytes memory data) internal virtual {
-    if (method == type(uint8).max - 1) {
-      // decompressSingleBitCall
-      decompressSingleBitCall(data);
-    } else if (method == type(uint8).max) {
-      // decompressDoubleBitCall
-      decompressDoubleBitCall(data);
-    } else {
-      revert('unknown method');
-    }
-  }
-
   /**
-   * Decompress and pass the data to callMethod
+   * Decompress and delegatecall self so msg.sender is preserved
    **/
   function decompressSingleBitCall(
     bytes memory data
   ) public {
     bytes memory finalData = Decompress.singleBit(data);
-    (uint8 method, bytes memory d) = unwrap(finalData);
-    callMethod(method, d);
+    (bool status,) = address(this).delegatecall(finalData);
+    require(status);
   }
 
   /**
-   * Decompress double bit encoding and pass the data to callMethod
+   * Decompress double bit encoding and delegatecall self so msg.sender is
+   * preserved
    **/
   function decompressDoubleBitCall(
     bytes memory data
   ) public {
     bytes memory finalData = Decompress.doubleBitZero(data);
-    (uint8 method, bytes memory d) = unwrap(finalData);
-    callMethod(method, d);
-  }
-
-  // unwrap the method id from the data
-  function unwrap(bytes memory d) internal pure returns (uint8, bytes memory) {
-    bytes memory b = new bytes(d.length - 1);
-    /* uint24 receiver = uint24(uint8(d[0]) * 2 ** 16) + uint24(uint8(d[1]) * 2 ** 8) + uint24(uint8(d[2])); */
-    uint8 method = uint8(d[0]);
-    uint words = (d.length - 1) / 32;
-    uint remaining = (d.length - 1) % 32;
-    bytes32 w;
-    for (uint x; x < words; x++) {
-      assembly {
-        w := mload(add(add(d, 33), mul(32, x)))
-        mstore(add(b, add(32, mul(x, 32))), w)
-      }
-    }
-    uint start = 1 + words * 32;
-    for (uint x = start; x < start + remaining; x++) {
-      b[x - 1] = d[x];
-    }
-    return (method, b);
+    (bool status,) = address(this).delegatecall(finalData);
+    require(status);
   }
 
   function decompress1(bytes32[1] calldata data) public {

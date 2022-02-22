@@ -25,12 +25,16 @@ describe('decompressor', () => {
     const v2 = 150
     const eq = true
     {
-      const data = compressDouble(1, [ v1, v2, eq ], ['uint', 'uint', 'bool'])
+      const data = compressDouble(
+        test.interface.encodeFunctionData('testMethod1', [v1, v2, eq])
+      )
       const tx = await test.decompressDoubleBitCall(data)
       await tx.wait()
     }
     {
-      const data = compressSingle(1, [ v1, v2, eq ], ['uint', 'uint', 'bool'])
+      const data = compressSingle(
+        test.interface.encodeFunctionData('testMethod1', [v1, v2, eq])
+      )
       const tx = await test[`decompress${data.length}`](data)
       await tx.wait()
     }
@@ -41,12 +45,16 @@ describe('decompressor', () => {
     const bytes = '0x000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20'
     const hash = ethers.utils.keccak256(bytes)
     {
-      const data = compressDouble(2, [ bytes, hash ], ['bytes', 'bytes32'])
+      const data = compressDouble(
+        test.interface.encodeFunctionData('testMethod2', [bytes, hash])
+      )
       const tx = await test.decompressDoubleBitCall(data)
       await tx.wait()
     }
     {
-      const data = compressSingle(2, [ bytes, hash ], ['bytes', 'bytes32'])
+      const data = compressSingle(
+        test.interface.encodeFunctionData('testMethod2', [bytes, hash])
+      )
       const tx = await test[`decompress${data.length}`](data)
       await tx.wait()
     }
