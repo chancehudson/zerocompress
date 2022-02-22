@@ -14,8 +14,8 @@ module.exports = {
  * @param object functionForm - ABI format for encoding the data
  * @returns A bytes array that can be used as an argument for the decompressor
  **/
-function compressSingle(receiver, method, data, functionFormat) {
-  const calldata = encodeCalldata(receiver, method, data, functionFormat)
+function compressSingle(method, data, functionFormat) {
+  const calldata = encodeCalldata(method, data, functionFormat)
   // now do single bit compression
   const rawData = calldata.replace('0x', '')
   const compressedBits = []
@@ -45,12 +45,24 @@ function compressSingle(receiver, method, data, functionFormat) {
   // now store a length identifier in a uint24, supports a length of 16 MB
   const dataLength = new BN(_data.length / 2).toString(16, 6)
   const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
-  const finalData = `0x${dataLength}${finalLength}${_data}${uniqueData}`
-  return finalData
+  const finalData = `${dataLength}${finalLength}${_data}${uniqueData}`
+  console.log(finalData)
+  const count = Math.ceil(finalData.length / 64)
+  const trailing = 64 - (finalData.length % 64)
+  // split to 32 byte chunks
+  const byteArgs = []
+  for (let chunk = 0; chunk < count; chunk++) {
+    const start = chunk * 64
+    const end = start + 64
+    byteArgs.push(`0x${finalData.slice(start, end)}`)
+  }
+  byteArgs[byteArgs.length - 1] = `${byteArgs[byteArgs.length - 1]}${Array(trailing).fill('0').join('')}`
+  return byteArgs
+  // return finalData
 }
 
-function compressDouble(receiver, method, data, functionFormat) {
-  const calldata = encodeCalldata(receiver, method, data, functionFormat)
+function compressDouble(method, data, functionFormat) {
+  const calldata = encodeCalldata(method, data, functionFormat)
   const bestSaving = findBestZeroRepeat(calldata)
   // now do single bit compression
   const _rawData = calldata.replace('0x', '')
@@ -116,17 +128,17 @@ function compressDouble(receiver, method, data, functionFormat) {
   return finalData
 }
 
-function encodeCalldata(receiver, method, data, functionFormat) {
+function encodeCalldata(method, data, functionFormat) {
   const functionData = functionFormat ? ethers.utils.defaultAbiCoder.encode(
     Array.isArray(functionFormat) ? functionFormat : [functionFormat],
     Array.isArray(data) ? data : [data],
   ) : data
   // manually tightly pack these integers
   // 3 bytes for the receiver
-  const _receiver = new BN(receiver).toString(16, 6)
+  // const _receiver = new BN(receiver).toString(16, 6)
   // 1 byte for the method
   const _method = new BN(method).toString(16, 2)
-  return `0x${_receiver}${_method}${functionData.replace('0x', '')}`
+  return `0x${/*_receiver*/''}${_method}${functionData.replace('0x', '')}`
 }
 
 function findBestZeroRepeat(data) {
