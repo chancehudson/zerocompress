@@ -45,7 +45,6 @@ function compressSingle(calldata) {
   const dataLength = new BN(_data.length / 2).toString(16, 6)
   const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
   const finalData = `${dataLength}${finalLength}${_data}${uniqueData}`
-  console.log(finalData)
   const count = Math.ceil(finalData.length / 64)
   const trailing = 64 - (finalData.length % 64)
   // split to 32 byte chunks
@@ -56,8 +55,11 @@ function compressSingle(calldata) {
     byteArgs.push(`0x${finalData.slice(start, end)}`)
   }
   byteArgs[byteArgs.length - 1] = `${byteArgs[byteArgs.length - 1]}${Array(trailing).fill('0').join('')}`
-  return byteArgs
-  // return finalData
+  // TODO: handle case of more than 32 words
+  return [
+    `decompress(bytes32[${byteArgs.length}])`,
+    byteArgs
+  ]
 }
 
 function compressDouble(calldata) {

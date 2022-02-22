@@ -32,10 +32,10 @@ describe('decompressor', () => {
       await tx.wait()
     }
     {
-      const data = compressSingle(
+      const [func, data] = compressSingle(
         test.interface.encodeFunctionData('testMethod1', [v1, v2, eq])
       )
-      const tx = await test[`decompress${data.length}`](data)
+      const tx = await test[func](data)
       await tx.wait()
     }
     {
@@ -52,10 +52,10 @@ describe('decompressor', () => {
       await tx.wait()
     }
     {
-      const data = compressSingle(
+      const [func, data] = compressSingle(
         test.interface.encodeFunctionData('testMethod2', [bytes, hash])
       )
-      const tx = await test[`decompress${data.length}`](data)
+      const tx = await test[func](data)
       await tx.wait()
     }
     {
