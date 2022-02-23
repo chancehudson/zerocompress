@@ -34,228 +34,421 @@ contract Decompressor {
    *
    * See scripts/generateBytesFunctions.js
    **/
-   function decompress(bytes32[1] calldata) public {
-    bytes memory b = new bytes(32);
+  function decompress(bytes32[1] calldata) public {
+    bytes memory b = new bytes(31);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 32)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 31)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[2] calldata) public {
-    bytes memory b = new bytes(64);
+    bytes memory b = new bytes(63);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 64)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 63)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[3] calldata) public {
-    bytes memory b = new bytes(96);
+    bytes memory b = new bytes(95);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 96)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 95)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[4] calldata) public {
-    bytes memory b = new bytes(128);
+    bytes memory b = new bytes(127);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 128)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 127)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[5] calldata) public {
-    bytes memory b = new bytes(160);
+    bytes memory b = new bytes(159);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 160)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 159)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[6] calldata) public {
-    bytes memory b = new bytes(192);
+    bytes memory b = new bytes(191);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 192)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 191)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[7] calldata) public {
-    bytes memory b = new bytes(224);
+    bytes memory b = new bytes(223);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 224)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 223)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[8] calldata) public {
-    bytes memory b = new bytes(256);
+    bytes memory b = new bytes(255);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 256)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 255)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[9] calldata) public {
-    bytes memory b = new bytes(288);
+    bytes memory b = new bytes(287);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 288)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 287)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[10] calldata) public {
-    bytes memory b = new bytes(320);
+    bytes memory b = new bytes(319);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 320)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 319)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[11] calldata) public {
-    bytes memory b = new bytes(352);
+    bytes memory b = new bytes(351);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 352)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 351)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[12] calldata) public {
-    bytes memory b = new bytes(384);
+    bytes memory b = new bytes(383);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 384)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 383)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[13] calldata) public {
-    bytes memory b = new bytes(416);
+    bytes memory b = new bytes(415);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 416)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 415)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[14] calldata) public {
-    bytes memory b = new bytes(448);
+    bytes memory b = new bytes(447);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 448)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 447)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[15] calldata) public {
-    bytes memory b = new bytes(480);
+    bytes memory b = new bytes(479);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 480)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 479)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[16] calldata) public {
-    bytes memory b = new bytes(512);
+    bytes memory b = new bytes(511);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 512)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 511)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[17] calldata) public {
-    bytes memory b = new bytes(544);
+    bytes memory b = new bytes(543);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 544)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 543)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[18] calldata) public {
-    bytes memory b = new bytes(576);
+    bytes memory b = new bytes(575);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 576)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 575)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[19] calldata) public {
-    bytes memory b = new bytes(608);
+    bytes memory b = new bytes(607);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 608)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 607)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[20] calldata) public {
-    bytes memory b = new bytes(640);
+    bytes memory b = new bytes(639);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 640)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 639)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[21] calldata) public {
-    bytes memory b = new bytes(672);
+    bytes memory b = new bytes(671);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 672)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 671)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[22] calldata) public {
-    bytes memory b = new bytes(704);
+    bytes memory b = new bytes(703);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 704)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 703)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[23] calldata) public {
-    bytes memory b = new bytes(736);
+    bytes memory b = new bytes(735);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 736)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 735)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[24] calldata) public {
-    bytes memory b = new bytes(768);
+    bytes memory b = new bytes(767);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 768)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 767)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[25] calldata) public {
-    bytes memory b = new bytes(800);
+    bytes memory b = new bytes(799);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 800)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 799)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[26] calldata) public {
-    bytes memory b = new bytes(832);
+    bytes memory b = new bytes(831);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 832)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 831)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[27] calldata) public {
-    bytes memory b = new bytes(864);
+    bytes memory b = new bytes(863);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 864)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 863)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[28] calldata) public {
-    bytes memory b = new bytes(896);
+    bytes memory b = new bytes(895);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 896)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 895)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[29] calldata) public {
-    bytes memory b = new bytes(928);
+    bytes memory b = new bytes(927);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 928)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 927)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[30] calldata) public {
-    bytes memory b = new bytes(960);
+    bytes memory b = new bytes(959);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 960)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 959)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[31] calldata) public {
-    bytes memory b = new bytes(992);
+    bytes memory b = new bytes(991);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 992)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 991)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
   function decompress(bytes32[32] calldata) public {
-    bytes memory b = new bytes(1024);
+    bytes memory b = new bytes(1023);
+    bytes1[1] memory t;
     assembly {
-      calldatacopy(add(b, 32), 4, 1024)
+      calldatacopy(t, 4, 1)
+      calldatacopy(add(b, 32), 5, 1023)
     }
-    decompressSingleBitCall(b);
+    if (uint8(t[0]) == uint8(0)) {
+      decompressSingleBitCall(b);
+    } else if (uint8(t[0]) == uint8(1)) {
+      decompressDoubleBitCall(b);
+    }
   }
+
 }

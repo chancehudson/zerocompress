@@ -45,20 +45,23 @@ function compressSingle(calldata) {
   const dataLength = new BN(_data.length / 2).toString(16, 6)
   const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
   const finalData = `${dataLength}${finalLength}${_data}${uniqueData}`
-  const count = Math.ceil(finalData.length / 64)
-  const trailing = 64 - (finalData.length % 64)
-  // split to 32 byte chunks
-  const byteArgs = []
-  for (let chunk = 0; chunk < count; chunk++) {
-    const start = chunk * 64
-    const end = start + 64
-    byteArgs.push(`0x${finalData.slice(start, end)}`)
+  const MAX_LENGTH = (32 * 32 * 2 - 1) // subtract one to account for type byte
+  if (finalData.length > MAX_LENGTH) {
+    return [
+      `decompressSingleBitCall(bytes)`,
+      `0x${finalData}`
+    ]
   }
-  byteArgs[byteArgs.length - 1] = `${byteArgs[byteArgs.length - 1]}${Array(trailing).fill('0').join('')}`
-  // TODO: handle case of more than 32 words
+  const fillDataLength = 64 - ((finalData.length + 2) % 64)
+  const fillData = Array(fillDataLength).fill('0').join('')
+  const _finalData = `00${finalData}${fillData}`.split('')
+  const finalArgs = []
+  while (_finalData.length > 0) {
+    finalArgs.push(_finalData.splice(0, 64).join(''))
+  }
   return [
-    `decompress(bytes32[${byteArgs.length}])`,
-    byteArgs
+    `decompress(bytes32[${finalArgs.length}])`,
+    finalArgs.map(d => `0x${d}`)
   ]
 }
 
@@ -124,8 +127,28 @@ function compressDouble(calldata) {
   const secondBestSavingHex = new BN(secondBestSaving.length / 2).toString(16, 2)
   const lengthBytes = new BN(_data.length / 2).toString(16, 6)
   const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
-  const finalData = `0x${lengthBytes}${finalLength}${_data}${uniqueData}${bestSavingHex}${secondBestSavingHex}`
-  return finalData
+  const mainData = `${lengthBytes}${finalLength}${_data}${uniqueData}`
+  const suffixData = `${bestSavingHex}${secondBestSavingHex}`
+  const MAX_LENGTH = (32 * 32 * 2 - 1) // subtract one to account for type byte
+  if (mainData.length + suffixData.length > MAX_LENGTH) {
+    return [
+      `decompressDoubleBit(bytes)`,
+      `0x${mainData}${suffixData}`
+    ]
+  }
+  const fillDataLength = 64-((mainData.length + suffixData.length + 2) % 64)
+  // otherwise split to bytes32[]
+  const fillData = Array(fillDataLength).fill('0').join('')
+  // 01 is the type byte
+  const finalData = `01${mainData}${fillData}${suffixData}`.split('')
+  const chunks = []
+  while (finalData.length > 0) {
+    chunks.push(finalData.splice(0, 64).join(''))
+  }
+  return [
+    `decompress(bytes32[${chunks.length}])`,
+    chunks.map(c => `0x${c}`)
+  ]
 }
 
 function findBestZeroRepeat(data) {
