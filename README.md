@@ -7,7 +7,7 @@ Compress Ethereum calldata then decompress on chain. For use in L2 applications.
 Calldata in Ethereum is priced at 4 gas per zero byte, and 16 gas per non-zero byte. As a result data can only be efficiently compressed if either:
 
 1. Zeroes are compressed to non-zeros with more than 75% efficiency
-2. Zeroes are preserved in the compression
+2. Zeroes are not replaced with non-zeroes during compression
 
 ### Single bit
 
@@ -32,77 +32,38 @@ Currently values 2 and 3 are used to insert a fixed number of zero bytes. This c
 
 ### Contract
 
-Implement the IDecompressReceiver protocol and register each receiver with the decompressor contract.
+Implement a contract inheriting from the `Decompressor` contract.
 
 ```js
-import "zerocompress/contracts/interfaces/IDecompressReceiver.sol";
+import "zerocompress/contracts/Decompressor.sol";
 
-contract Example is IDecompressReceiver {
-  function callMethod(uint8 method, bytes memory data) external override {
-    if (method == uint8(0)) {
-      // decode a struct for use
-      MyStruct memory s = abi.decode(data, (MyStruct));
-      // then do your business logic
-      //
-    } else if (method == uint8(1)) {
-      // call this method instead
-      //
-    } else {
-      // we don't know this method
-      revert('unknown');
-    }
+contract Example is Decompressor {
+  function testFunc(uint a, uint b) public {
+    require(a != b);
   }
 }
 ```
 
 ### JS
 
-Compress the calldata for the target function using the ABI encoder. You can pass a full ABI spec, an array of types, or nothing to specify raw bytes.
+Encode the data for the target function call using Ethers or Web3. Then compress the data using `compressSingle` or `compressDouble`. These functions will return a function to call and data to pass.
 
 ```js
+const { ethers } = require('ethers')
+const { ExampleABI } = require('Example.sol.json')
 const { compressSingle, compressDouble } = require('zerocompress')
 
-/**
- * Example with full format
- **/
-const functionFormat = {
-  type: 'tuple',
-  components: [
-    { name: 'counterparty', type: 'uint48' },
-    {
-      type: 'tuple[]',
-      name: 'fixedParts',
-      components: [
-        { name: 'participants', type: 'uint48[]' },
-        { name: 'nonce', type: 'uint48' },
-      ],
-    },
-    { name: 'outcomeBytes', type: 'bytes[]' },
-    { name: 'signature', type: 'uint[2]' },
-  ],
-}
-const data = compressDouble(
-  1, // contract index 1
-  0, // method 0
-  {
-    counterparty,
-    fixedParts,
-    outcomeBytes,
-    signature,
-  },
-  functionFormat
+const example = new ethers.Contract(
+  '0xabcabcabc0abcabcabc0abcabcabc0abcabcabc0',
+  ExampleABI
 )
-await Decompressor.decompressDoubleBitCall(data)
 
-
-/**
- * Example with more simple abi format
- **/
-const data = compressDouble(
-  1, // contract index 1
-  1, // method 1
-  [ arg1, arg2, arg3 ],
-  [ 'uint', 'uint', 'bytes32' ]
-)
-await Decompressor.decompressDoubleBitCall(data)
+// Encode the function call
+const calldata = example.interface.encodeFunctionData('testFunc', [ 20, 40 ])
+// Compress the data and get a function to call and data to pass
+const [ func, data ] = compressSingle(calldata)
+// Call the function with the data
+const tx = await example[func](data)
+// Wait for the transaction to complete
+await tx.wait()
 ```

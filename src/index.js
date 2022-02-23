@@ -14,8 +14,7 @@ module.exports = {
  * @param object functionForm - ABI format for encoding the data
  * @returns A bytes array that can be used as an argument for the decompressor
  **/
-function compressSingle(receiver, method, data, functionFormat) {
-  const calldata = encodeCalldata(receiver, method, data, functionFormat)
+function compressSingle(calldata) {
   // now do single bit compression
   const rawData = calldata.replace('0x', '')
   const compressedBits = []
@@ -45,12 +44,28 @@ function compressSingle(receiver, method, data, functionFormat) {
   // now store a length identifier in a uint24, supports a length of 16 MB
   const dataLength = new BN(_data.length / 2).toString(16, 6)
   const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
-  const finalData = `0x${dataLength}${finalLength}${_data}${uniqueData}`
-  return finalData
+  const finalData = `${dataLength}${finalLength}${_data}${uniqueData}`
+  const MAX_LENGTH = (32 * 32 * 2 - 1) // subtract one to account for type byte
+  if (finalData.length > MAX_LENGTH) {
+    return [
+      `decompressSingleBitCall(bytes)`,
+      `0x${finalData}`
+    ]
+  }
+  const fillDataLength = 64 - ((finalData.length + 2) % 64)
+  const fillData = Array(fillDataLength).fill('0').join('')
+  const _finalData = `00${finalData}${fillData}`.split('')
+  const finalArgs = []
+  while (_finalData.length > 0) {
+    finalArgs.push(_finalData.splice(0, 64).join(''))
+  }
+  return [
+    `decompress(bytes32[${finalArgs.length}])`,
+    finalArgs.map(d => `0x${d}`)
+  ]
 }
 
-function compressDouble(receiver, method, data, functionFormat) {
-  const calldata = encodeCalldata(receiver, method, data, functionFormat)
+function compressDouble(calldata) {
   const bestSaving = findBestZeroRepeat(calldata)
   // now do single bit compression
   const _rawData = calldata.replace('0x', '')
@@ -112,21 +127,28 @@ function compressDouble(receiver, method, data, functionFormat) {
   const secondBestSavingHex = new BN(secondBestSaving.length / 2).toString(16, 2)
   const lengthBytes = new BN(_data.length / 2).toString(16, 6)
   const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
-  const finalData = `0x${lengthBytes}${finalLength}${_data}${uniqueData}${bestSavingHex}${secondBestSavingHex}`
-  return finalData
-}
-
-function encodeCalldata(receiver, method, data, functionFormat) {
-  const functionData = functionFormat ? ethers.utils.defaultAbiCoder.encode(
-    Array.isArray(functionFormat) ? functionFormat : [functionFormat],
-    Array.isArray(data) ? data : [data],
-  ) : data
-  // manually tightly pack these integers
-  // 3 bytes for the receiver
-  const _receiver = new BN(receiver).toString(16, 6)
-  // 1 byte for the method
-  const _method = new BN(method).toString(16, 2)
-  return `0x${_receiver}${_method}${functionData.replace('0x', '')}`
+  const mainData = `${lengthBytes}${finalLength}${_data}${uniqueData}`
+  const suffixData = `${bestSavingHex}${secondBestSavingHex}`
+  const MAX_LENGTH = (32 * 32 * 2 - 1) // subtract one to account for type byte
+  if (mainData.length + suffixData.length > MAX_LENGTH) {
+    return [
+      `decompressDoubleBit(bytes)`,
+      `0x${mainData}${suffixData}`
+    ]
+  }
+  const fillDataLength = 64-((mainData.length + suffixData.length + 2) % 64)
+  // otherwise split to bytes32[]
+  const fillData = Array(fillDataLength).fill('0').join('')
+  // 01 is the type byte
+  const finalData = `01${mainData}${fillData}${suffixData}`.split('')
+  const chunks = []
+  while (finalData.length > 0) {
+    chunks.push(finalData.splice(0, 64).join(''))
+  }
+  return [
+    `decompress(bytes32[${chunks.length}])`,
+    chunks.map(c => `0x${c}`)
+  ]
 }
 
 function findBestZeroRepeat(data) {
