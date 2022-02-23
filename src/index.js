@@ -132,7 +132,7 @@ function compressDouble(calldata) {
   const MAX_LENGTH = (32 * 32 * 2 - 1) // subtract one to account for type byte
   if (mainData.length + suffixData.length > MAX_LENGTH) {
     return [
-      `decompressDoubleBit(bytes)`,
+      `decompressDoubleBitCall(bytes)`,
       `0x${mainData}${suffixData}`
     ]
   }

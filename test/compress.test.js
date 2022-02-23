@@ -101,7 +101,7 @@ describe('decompressor', () => {
     const charset = 'abcdef0123456789'
     // Make the calldata large enough that it can't use one of the fixed length
     // functions e.g. decompress(bytes32[5])
-    const hexData = '0x' + Array(1024)
+    const hexData = '0x' + Array(2048)
       .fill()
       .map(() => charset[Math.floor(Math.random() * 16)])
       .join('')
