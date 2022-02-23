@@ -7,7 +7,7 @@ Compress Ethereum calldata then decompress on chain. For use in L2 applications.
 Calldata in Ethereum is priced at 4 gas per zero byte, and 16 gas per non-zero byte. As a result data can only be efficiently compressed if either:
 
 1. Zeroes are compressed to non-zeros with more than 75% efficiency
-2. Zeroes are preserved in the compression
+2. Zeroes are not replaced with non-zeroes during compression
 
 ### Single bit
 
