@@ -96,4 +96,28 @@ describe('decompressor', () => {
       await tx.wait()
     }
   })
+
+  it('should compress large data into bytes array', async () => {
+    const charset = 'abcdef0123456789'
+    // Make the calldata large enough that it can't use one of the fixed length
+    // functions e.g. decompress(bytes32[5])
+    const hexData = '0x' + Array(1024)
+      .fill()
+      .map(() => charset[Math.floor(Math.random() * 16)])
+      .join('')
+    const hash = ethers.utils.keccak256(hexData)
+    const { test } = await getDeployedContracts()
+    const calldata = test.interface.encodeFunctionData('testMethod2', [ hexData, hash ])
+    {
+      // single compress
+      const [func, data] = compressSingle(calldata)
+      const tx = await test[func](data)
+      await tx.wait()
+    }
+    {
+      const [func, data] = compressDouble(calldata)
+      const tx = await test[func](data)
+      await tx.wait()
+    }
+  })
 })
