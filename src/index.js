@@ -1,5 +1,6 @@
 const BN = require('bn.js')
 const { ethers } = require('ethers')
+const RegistryABI = require('./AddressRegistryABI.json')
 
 module.exports = {
   compressSingle,
@@ -14,20 +15,60 @@ module.exports = {
  * @param object functionForm - ABI format for encoding the data
  * @returns A bytes array that can be used as an argument for the decompressor
  **/
-function compressSingle(calldata) {
+function compressSingle(calldata, options = {}) {
+  // defaults
+  Object.assign(options, {
+    addressSubs: {},
+    ...options,
+  })
+  options.addressSubs = Object.keys(options.addressSubs).reduce((acc, key) => {
+    return {
+      [key.toLowerCase()]: options.addressSubs[key],
+      ...acc,
+    }
+  }, {})
   // now do single bit compression
-  const rawData = calldata.replace('0x', '')
+  let rawData = calldata.replace('0x', '').toLowerCase()
+  // first look for addresses, then replace them with a marker
+  // then during iteration below insert the opcode logic
+  // returns de-duplicated addresses
+  const addresses = findAddresses(rawData).filter(a => options.addressSubs[a])
+  const addressOpcodes = {}
+  let subByte
+
+  for (const a of addresses) {
+    subByte = nextSubstitutionByte(subByte)
+    // re-pad it and insert a marker
+    const subhex = new BN(options.addressSubs[a]).toString(16, 6)
+    // leading 00 to indicate an opcode
+    // opcode 02 indicating address replacement
+    // 3 bytes indicating the address id
+    const opcode = `0002${subhex}`
+    addressOpcodes[subByte] = opcode
+    const fullAddress = `000000000000000000000000${a.replace('0x', '')}`
+    rawData = rawData.replace(new RegExp(fullAddress, 'g'), subByte)
+  }
+
   const compressedBits = []
+  // can be strings of arbitrary length (%2=0) hex, not just single bytes
   const uniqueBytes = []
   for (let x = 0; x < rawData.length / 2; x++) {
     const byte = rawData.slice(x * 2, x * 2 + 2)
     if (byte === '00') {
       compressedBits.push('0')
-    } else {
+    } else if (/[a-fA-F0-9]{2}/.test(byte)){
+      // valid hex
       compressedBits.push('1')
       uniqueBytes.push(byte)
+    } else if (addressOpcodes[byte]) {
+      // address opcode
+      uniqueBytes.push(addressOpcodes[byte])
+      compressedBits.push('1')
+    } else {
+      throw new Error(`Unrecognized byte string "${byte}"`)
     }
   }
+  // console.log(uniqueBytes)
   // now convert the binary to hex and abi encode the unique bytes
   const reverse = (str) => str.split('').reverse().join('')
   const bytes = []
@@ -54,14 +95,10 @@ function compressSingle(calldata) {
   }
   const fillDataLength = 64 - ((finalData.length + 2) % 64)
   const fillData = Array(fillDataLength).fill('0').join('')
-  const _finalData = `00${finalData}${fillData}`.split('')
-  const finalArgs = []
-  while (_finalData.length > 0) {
-    finalArgs.push(_finalData.splice(0, 64).join(''))
-  }
+  const chunks = chunkString(`00${finalData}${fillData}`, 64)
   return [
-    `decompress(bytes32[${finalArgs.length}])`,
-    finalArgs.map(d => `0x${d}`)
+    `decompress(bytes32[${chunks.length}])`,
+    chunks.map(d => `0x${d}`)
   ]
 }
 
@@ -140,15 +177,57 @@ function compressDouble(calldata) {
   // otherwise split to bytes32[]
   const fillData = Array(fillDataLength).fill('0').join('')
   // 01 is the type byte
-  const finalData = `01${mainData}${fillData}${suffixData}`.split('')
-  const chunks = []
-  while (finalData.length > 0) {
-    chunks.push(finalData.splice(0, 64).join(''))
-  }
+  const finalData = `01${mainData}${fillData}${suffixData}`
+  const chunks = chunkString(finalData, 64)
   return [
     `decompress(bytes32[${chunks.length}])`,
     chunks.map(c => `0x${c}`)
   ]
+}
+
+function chunkString(str, chunkSize = 64) {
+  if (str.length % chunkSize !== 0) {
+    throw new Error('String cannot be chunked evenly')
+  }
+  const charArr = str.split('')
+  const chunks = []
+  for (;;) {
+    if (charArr.length === 0) return chunks
+    chunks.push(charArr.splice(0, chunkSize).join(''))
+  }
+}
+
+function nextSubstitutionByte(current) {
+  const charset = 'ghijklmnopqrstuvwxyz'
+  if (!current) return 'gg'
+  if (current === 'zz') throw new Error('No more substitution bytes')
+  if (current.length !== 2) throw new Error('Invalid current substitution byte')
+  if (current[1] === 'z') {
+    const index = charset.indexOf(current[0])
+    return `${charset[index+1]}g`
+  } else {
+    const index = chaset.indexOf(current[1])
+    return `${current[0]}${charset[index+1]}`
+  }
+}
+
+// accepts a structure function call for `data` (4 byte sig, 32 byte args)
+function findAddresses(data) {
+  const args = data.replace('0x', '').slice(8)
+  // now check every 32 byte value to see if it's an address (12 leading 0 bytes)
+  const chunks = chunkString(args)
+  const addresses = []
+  for (const chunk of chunks) {
+    if (!chunk.startsWith('000000000000000000000000')) continue
+    addresses.push('0x'+chunk.slice(24))
+  }
+  const dupes = {}
+  // dedupe
+  return addresses.filter(a => {
+    if (dupes[a]) return false
+    dupes[a] = true
+    return true
+  })
 }
 
 function findBestZeroRepeat(data) {

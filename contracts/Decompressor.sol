@@ -5,13 +5,15 @@ pragma experimental ABIEncoderV2;
 import "./Decompress.sol";
 
 contract Decompressor {
+  address dec = address(0);
+
   /**
    * Decompress and delegatecall self so msg.sender is preserved
    **/
   function decompressSingleBitCall(
     bytes memory data
   ) public {
-    bytes memory finalData = Decompress.singleBit(data);
+    bytes memory finalData = Decompress(dec).singleBit(data);
     (bool status,) = address(this).delegatecall(finalData);
     require(status);
   }
@@ -23,7 +25,7 @@ contract Decompressor {
   function decompressDoubleBitCall(
     bytes memory data
   ) public {
-    bytes memory finalData = Decompress.doubleBitZero(data);
+    bytes memory finalData = Decompress(dec).doubleBitZero(data);
     (bool status,) = address(this).delegatecall(finalData);
     require(status);
   }

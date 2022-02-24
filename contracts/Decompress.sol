@@ -2,15 +2,17 @@
 pragma solidity >=0.7.0;
 pragma experimental ABIEncoderV2;
 
-library Decompress {
+import { AddressRegistry } from "./AddressRegistry.sol";
+
+contract Decompress is AddressRegistry {
   /**
    * A 0 bit indicates a 0 byte
    * A 1 bit indicates a unique byte
    **/
   function singleBit(
     bytes memory data
-  ) public pure returns (bytes memory) {
-    uint8[8] memory masks;
+  ) public view returns (bytes memory) {
+    /* uint8[8] memory masks;
     masks[0] = 1;
     masks[1] = 2;
     masks[2] = 4;
@@ -18,7 +20,7 @@ library Decompress {
     masks[4] = 16;
     masks[5] = 32;
     masks[6] = 64;
-    masks[7] = 128;
+    masks[7] = 128; */
 
     // take a 24 bit uint off the front of the data
     uint24 dataLength = uint24(uint8(data[0]) * 2 ** 16) + uint24(uint8(data[1]) * 2 ** 8) + uint24(uint8(data[2]));
@@ -30,23 +32,79 @@ library Decompress {
     uint48 latestUnique = 0;
     // 1 bits per item
     // do an AND then shift
-    // start at a 3 byte offset
+    // start at a 5 byte offset
     uint8 offset = 5;
+    uint24 finalDataOffset = 0;
     for (uint48 x = offset; x < dataLength + offset; x++) {
       // all zeroes in this byte, skip it
-      /* if (uint8(data[x]) == type(uint8).max) continue; */
+      if (uint8(data[x]) == 0) continue;
       for (uint8 y; y < 8; y++) {
-        if (8*(x-offset)+y >= finalLength) return finalData;
+        uint48 index = 8*(x-offset)+y+finalDataOffset;
+        if (index >= finalLength) return finalData;
         // take the current bit and convert it to a uint8
         // use exponentiation to bit shift
-        uint8 thisVal = uint8(data[x] & bytes1(masks[y])) / masks[y];
+        uint8 thisVal = uint8(data[x] & bytes1(uint8(2**y))) / uint8(2**y);
         // if non-zero add the unique value
-        if (thisVal == 1) {
-          finalData[8*(x - offset)+y] = data[uniqueStart + latestUnique++];
+        if (thisVal == 0) continue;
+        assert(thisVal == 1);
+        if (uint8(data[uniqueStart + latestUnique]) == 0) {
+          // it's an opcode
+          (uint48 uniqueIncr, uint24 dataIncr) = handleOpcode(
+            data,
+            uniqueStart + latestUnique,
+            finalData,
+            index
+          );
+          latestUnique += uniqueIncr;
+          finalDataOffset += dataIncr;
+        } else {
+          finalData[index] = data[uniqueStart + latestUnique++];
         }
       }
     }
     return finalData;
+  }
+
+  function copyData(
+    bytes memory input,
+    bytes memory dest,
+    uint destOffset
+  ) internal pure {
+    require(input.length % 32 == 0, 'non32');
+    require(dest.length >= destOffset + input.length, 'long');
+    for (uint x; x < input.length/32; x++) {
+      assembly {
+        mstore(
+          add(add(add(dest, 32), destOffset), mul(x, 32)),
+          add(input, mul(x, 32))
+        )
+      }
+    }
+  }
+
+  function handleOpcode(
+    bytes memory uniqueData,
+    uint uniqueOffset,
+    bytes memory finalData,
+    uint finalOffset
+  ) internal view returns (uint48, uint24) {
+    uint8 opcode = uint8(uniqueData[uniqueOffset + 1]);
+    if (opcode == uint8(2)) {
+      // address replacement
+      uint24 id = uint24(
+        uint8(uniqueData[uniqueOffset+2]) * 2 ** 16) + uint24(uint8(uniqueData[uniqueOffset+3]) * 2 ** 8) + uint24(uint8(uniqueData[uniqueOffset+4])
+      );
+      address a = addressById[id];
+      require(a != address(0), 'address not set');
+      copyData(
+        bytes32ToBytes(bytes32(bytes20(a))),
+        finalData,
+        finalOffset
+      );
+      return (5, 32);
+    } else {
+      revert('unknown opcode');
+    }
   }
 
   function doubleBitZero(
@@ -99,5 +157,13 @@ library Decompress {
       }
     }
     return finalData;
+  }
+
+  function bytes32ToBytes(bytes32 input) internal pure returns (bytes memory) {
+    bytes memory b = new bytes(32);
+    assembly {
+      mstore(add(b, 32), input) // set the bytes data
+    }
+    return b;
   }
 }
