@@ -19,11 +19,11 @@ Data is compressed by looking at each byte and storing a single bit indicating w
 
 A zero value in the `uniques` array indicates a special operation. The byte following a zero byte in the `uniques` array specifies an opcode for inflation. Any number of following bytes may be used as an argument for the opcode.
 
-- `0x00()` - zero insertion, insert a fixed number of zeroes specified by a number at register 1 (this number may be 0) (use this to make the total data length shorter to avoid padding)
-- `0x01(uint8 length)` - insert a repeat string of bytes specified at register 2
-- `0x02(uint24 id)` - address insertion
-- `0x03(uint24 id)` - bls pubkey insertion (uint[4])
-- `0x10-0xff` - for subclass use
+- [x] `0x00()` - zero insertion, insert a fixed number of zeroes specified by a number at register 1 (this number may be 0) (use this to make the total data length shorter to avoid padding)
+- [ ] `0x01(uint8 length)` - insert a repeat string of bytes specified at register 2
+- [x] `0x02(uint24 id)` - address insertion
+- [ ] `0x03(uint24 id)` - bls pubkey insertion (uint[4])
+- [x] `0x10-0xff` - for subclass use
 
 Registers are bytes at the end of the data.
 
