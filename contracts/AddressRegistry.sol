@@ -18,9 +18,8 @@ contract AddressRegistry {
     require(zeroCount < 16, 'nosav');
     // otherwise we'll store it
     require(idByAddress[a] == 0, 'dupe');
-    require(latestId < type(uint24).max, 'full');
-    id = ++latestId;
-    assert(addressById[id] == address(0));
+    id = latestId++;
+    require(addressById[id] == address(0), 'full');
     addressById[id] = a;
     idByAddress[a] = id;
   }
