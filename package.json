@@ -24,6 +24,7 @@
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
+    "@uniswap/v3-core": "^1.0.1",
     "hardhat": "^2.8.4"
   }
 }
