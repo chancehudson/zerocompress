@@ -49,6 +49,21 @@ function compressSingle(calldata, options = {}) {
     rawData = rawData.replace(new RegExp(fullAddress, 'g'), subByte)
   }
 
+  const bestSaving = findBestZeroRepeat(rawData)
+  let offset = 0
+  const zeroSubByte = nextSubstitutionByte(subByte)
+  const zeroSubLength = new BN(bestSaving.length/2).toString(16, 2)
+  for (;;) {
+    if (bestSaving.length === 0) break
+    const index = rawData.indexOf(bestSaving, offset)
+    if (index === -1) break
+    if (index % 2 === 1) {
+      offset = index + 1
+      if (rawData.indexOf(bestSaving, offset) !== offset) continue
+      rawData = `${rawData.slice(0, index+1)}${zeroSubByte}${rawData.slice(index + 1 + bestSaving.length)}`
+    } else rawData = `${rawData.slice(0, index)}${zeroSubByte}${rawData.slice(index + bestSaving.length)}`
+  }
+
   const compressedBits = []
   // can be strings of arbitrary length (%2=0) hex, not just single bytes
   const uniqueBytes = []
@@ -63,6 +78,9 @@ function compressSingle(calldata, options = {}) {
     } else if (addressOpcodes[byte]) {
       // address opcode
       uniqueBytes.push(addressOpcodes[byte])
+      compressedBits.push('1')
+    } else if (zeroSubByte === byte) {
+      uniqueBytes.push('0000')
       compressedBits.push('1')
     } else {
       throw new Error(`Unrecognized byte string "${byte}"`)
@@ -85,7 +103,7 @@ function compressSingle(calldata, options = {}) {
   // now store a length identifier in a uint24, supports a length of 16 MB
   const dataLength = new BN(_data.length / 2).toString(16, 6)
   const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
-  const finalData = `${dataLength}${finalLength}${_data}${uniqueData}`
+  const finalData = `${dataLength}${finalLength}${_data}${uniqueData}${zeroSubLength}`
   const MAX_LENGTH = (32 * 32 * 2 - 1) // subtract one to account for type byte
   if (finalData.length > MAX_LENGTH) {
     return [
@@ -95,7 +113,7 @@ function compressSingle(calldata, options = {}) {
   }
   const fillDataLength = 64 - ((finalData.length + 2) % 64)
   const fillData = Array(fillDataLength).fill('0').join('')
-  const chunks = chunkString(`00${finalData}${fillData}`, 64)
+  const chunks = chunkString(`00${finalData.slice(0, -2)}${fillData}${zeroSubLength}`, 64)
   return [
     `decompress(bytes32[${chunks.length}])`,
     chunks.map(d => `0x${d}`)
@@ -206,7 +224,7 @@ function nextSubstitutionByte(current) {
     const index = charset.indexOf(current[0])
     return `${charset[index+1]}g`
   } else {
-    const index = chaset.indexOf(current[1])
+    const index = charset.indexOf(current[1])
     return `${current[0]}${charset[index+1]}`
   }
 }
@@ -240,7 +258,7 @@ function findBestZeroRepeat(data) {
         continue
       }
       const cost = gasCost(k)
-      const savings = cost * repeats[k] - repeats[k] * 16
+      const savings = cost * repeats[k] - (repeats[k] * 16 + 8 + 16)
       if (savings > bestSavings) {
         bestSavings = savings
         repeat = k

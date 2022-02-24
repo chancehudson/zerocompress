@@ -135,5 +135,6 @@ describe('decompressor', () => {
       const tx = await test[func](data)
       await tx.wait()
     }
+    await test.testMethod2(hexData, hash).then(t => t.wait())
   })
 })

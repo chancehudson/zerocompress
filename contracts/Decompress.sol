@@ -34,18 +34,25 @@ contract Decompress is AddressRegistry {
     // do an AND then shift
     // start at a 5 byte offset
     uint8 offset = 5;
-    uint24 finalDataOffset = 0;
+    /* uint24 finalDataOffset = 0; */
+    uint48 zeroOffset = 0;
     for (uint48 x = offset; x < dataLength + offset; x++) {
       // all zeroes in this byte, skip it
-      if (uint8(data[x]) == 0) continue;
+      if (uint8(data[x]) == 0) {
+        zeroOffset += 8;
+        continue;
+      }
       for (uint8 y; y < 8; y++) {
-        uint48 index = 8*(x-offset)+y+finalDataOffset;
-        if (index >= finalLength) return finalData;
+        /* uint48 index = 8*(x-offset)+y+finalDataOffset; */
+        if (zeroOffset >= finalLength) return finalData;
         // take the current bit and convert it to a uint8
         // use exponentiation to bit shift
         uint8 thisVal = uint8(data[x] & bytes1(uint8(2**y))) / uint8(2**y);
         // if non-zero add the unique value
-        if (thisVal == 0) continue;
+        if (thisVal == 0) {
+          zeroOffset++;
+          continue;
+        }
         assert(thisVal == 1);
         if (uint8(data[uniqueStart + latestUnique]) == 0) {
           // it's an opcode
@@ -53,12 +60,12 @@ contract Decompress is AddressRegistry {
             data,
             uniqueStart + latestUnique,
             finalData,
-            index
+            zeroOffset
           );
           latestUnique += uniqueIncr;
-          finalDataOffset += dataIncr;
+          zeroOffset += dataIncr;
         } else {
-          finalData[index] = data[uniqueStart + latestUnique++];
+          finalData[zeroOffset++] = data[uniqueStart + latestUnique++];
         }
       }
     }
@@ -89,7 +96,11 @@ contract Decompress is AddressRegistry {
     uint finalOffset
   ) internal view returns (uint48, uint24) {
     uint8 opcode = uint8(uniqueData[uniqueOffset + 1]);
-    if (opcode == uint8(2)) {
+    if (opcode == uint8(0)) {
+      // insert 0's
+      uint8 count = uint8(uniqueData[uniqueData.length - 1]);
+      return (2, count);
+    } else if (opcode == uint8(2)) {
       // address replacement
       uint24 id = uint24(
         uint8(uniqueData[uniqueOffset+2]) * 2 ** 16) + uint24(uint8(uniqueData[uniqueOffset+3]) * 2 ** 8) + uint24(uint8(uniqueData[uniqueOffset+4])
