@@ -34,7 +34,7 @@ library Decompress {
     uint8 offset = 5;
     for (uint48 x = offset; x < dataLength + offset; x++) {
       // all zeroes in this byte, skip it
-      /* if (uint8(data[x]) == type(uint8).max) continue; */
+      if (uint8(data[x]) == 0) continue;
       for (uint8 y; y < 8; y++) {
         if (8*(x-offset)+y >= finalLength) return finalData;
         // take the current bit and convert it to a uint8
