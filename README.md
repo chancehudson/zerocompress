@@ -11,20 +11,21 @@ Calldata in Ethereum is priced at 4 gas per zero byte, and 16 gas per non-zero b
 
 ### Single bit
 
-Data is compressed by looking at each byte and storing a single bit indicating whether the byte is zero or non-zero. If the byte is non-zero it is added to a "uniques" array of bytes.
+Data is compressed by looking at each byte and storing a single bit indicating whether the byte is zero or non-zero. If the byte is non-zero it is added to a `uniques` array of bytes.
 
 **Each sequence of 8 consecutive zero bytes is compressed to a single zero byte.**
 
-### Double bit
+### Opcodes
 
-The double bit approach is similar to the single bit, but stores data in two bits. This allows 4 options to be stored.
+A zero value in the `uniques` array indicates a special operation. The byte following a zero byte in the `uniques` array specifies an opcode for inflation. Any number of following bytes may be used as an argument for the opcode.
 
-- 0: a zero byte
-- 1: a non-zero byte
-- 2: custom sequence
-- 3: custom sequence
+- `0x00()` - zero insertion, insert a fixed number of zeroes specified by a number at register 1 (this number may be 0) (use this to make the total data length shorter to avoid padding)
+- `0x01(uint8 length)` - insert a repeat string of bytes specified at register 2
+- `0x02(uint24 id)` - address insertion
+- `0x03(uint24 id)` - bls pubkey insertion (uint[4])
+- `0x10-0xff` - for subclass use
 
-Currently values 2 and 3 are used to insert a fixed number of zero bytes. This can be extended to store repeated strings of non-zero bytes (if they exist).
+Registers are bytes at the end of the data.
 
 ## Use
 
