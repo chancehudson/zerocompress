@@ -21,8 +21,14 @@ function compressSingle(calldata, options = {}) {
     addressSubs: {},
     ...options,
   })
+  options.addressSubs = Object.keys(options.addressSubs).reduce((acc, key) => {
+    return {
+      [key.toLowerCase()]: options.addressSubs[key],
+      ...acc,
+    }
+  }, {})
   // now do single bit compression
-  let rawData = calldata.replace('0x', '')
+  let rawData = calldata.replace('0x', '').toLowerCase()
   // first look for addresses, then replace them with a marker
   // then during iteration below insert the opcode logic
   // returns de-duplicated addresses

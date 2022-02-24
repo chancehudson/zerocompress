@@ -7,18 +7,34 @@ async function getDeployedContracts() {
   const decompress = await Decompress.deploy()
   await decompress.deployed()
 
-  const Test = await ethers.getContractFactory('Test', {
-    libraries: {
-      Decompress: decompress.address,
-    }
-  })
-  const test = await Test.deploy()
+  const Test = await ethers.getContractFactory('Test')
+  const test = await Test.deploy(decompress.address)
   await test.deployed()
 
-  return { test }
+  return { decompress, test }
 }
 
 describe('decompressor', () => {
+  it('should compress address', async () => {
+    const [ user ] = await ethers.getSigners()
+    const { test, decompress } = await getDeployedContracts()
+    await decompress.connect(user).bindAddress(user.address).then(t => t.wait())
+    const id = await decompress.idByAddress(user.address)
+    {
+      const [func, data] = compressSingle(
+        test.interface.encodeFunctionData('testMethod3', [user.address]),
+        {
+          addressSubs: {
+            [user.address]: id
+          }
+        }
+      )
+      const tx = await test[func](data)
+      await tx.wait()
+    }
+    await test.testMethod3(user.address).then(t => t.wait())
+  })
+
   it('should single compress and call a function', async () => {
     const { test } = await getDeployedContracts()
     const v1 = 150

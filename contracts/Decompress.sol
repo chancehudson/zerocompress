@@ -4,10 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import { AddressRegistry } from "./AddressRegistry.sol";
 
-import 'hardhat/console.sol';
-
-library Decompress {
-  address public constant REGISTRY = address(0);
+contract Decompress is AddressRegistry {
   /**
    * A 0 bit indicates a 0 byte
    * A 1 bit indicates a unique byte
@@ -73,8 +70,8 @@ library Decompress {
     bytes memory dest,
     uint destOffset
   ) internal pure {
-    require(input.length % 32 == 0);
-    require(dest.length > destOffset + input.length);
+    require(input.length % 32 == 0, 'non32');
+    require(dest.length >= destOffset + input.length, 'long');
     for (uint x; x < input.length/32; x++) {
       assembly {
         mstore(
@@ -97,7 +94,7 @@ library Decompress {
       uint24 id = uint24(
         uint8(uniqueData[uniqueOffset+2]) * 2 ** 16) + uint24(uint8(uniqueData[uniqueOffset+3]) * 2 ** 8) + uint24(uint8(uniqueData[uniqueOffset+4])
       );
-      address a = AddressRegistry(REGISTRY).addressById(id);
+      address a = addressById[id];
       require(a != address(0), 'address not set');
       copyData(
         bytes32ToBytes(bytes32(bytes20(a))),
