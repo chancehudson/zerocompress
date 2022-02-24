@@ -22,18 +22,18 @@ contract Decompress is AddressRegistry {
     masks[6] = 64;
     masks[7] = 128; */
 
-    // take a 24 bit uint off the front of the data
-    uint24 dataLength = uint24(uint8(data[0]) * 2 ** 16) + uint24(uint8(data[1]) * 2 ** 8) + uint24(uint8(data[2]));
+    // take a 16 bit uint off the front of the data
+    uint24 dataLength = uint24(uint8(data[0]) * 2 ** 8) + uint24(uint8(data[1]));
     // then a 16 bit uint after that
-    uint16 finalLength = uint16(uint16(uint8(data[3])) * 2 ** 8) + uint16(uint8(data[4]));
-    uint48 uniqueStart = 5 + dataLength;
+    uint16 finalLength = uint16(uint16(uint8(data[2])) * 2 ** 8) + uint16(uint8(data[3]));
+    uint48 uniqueStart = 4 + dataLength;
     bytes memory finalData = new bytes(finalLength);
 
     uint48 latestUnique = 0;
     // 1 bits per item
     // do an AND then shift
     // start at a 5 byte offset
-    uint8 offset = 5;
+    uint8 offset = 4;
     /* uint24 finalDataOffset = 0; */
     uint48 zeroOffset = 0;
     for (uint48 x = offset; x < dataLength + offset; x++) {

@@ -101,7 +101,7 @@ function compressSingle(calldata, options = {}) {
   const _data = bytes.join('')
   const uniqueData = uniqueBytes.join('')
   // now store a length identifier in a uint24, supports a length of 16 MB
-  const dataLength = new BN(_data.length / 2).toString(16, 6)
+  const dataLength = new BN(_data.length / 2).toString(16, 4)
   const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
   const finalData = `${dataLength}${finalLength}${_data}${uniqueData}${zeroSubLength}`
   const MAX_LENGTH = (32 * 32 * 2 - 1) // subtract one to account for type byte
