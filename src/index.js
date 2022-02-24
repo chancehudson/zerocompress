@@ -54,14 +54,10 @@ function compressSingle(calldata) {
   }
   const fillDataLength = 64 - ((finalData.length + 2) % 64)
   const fillData = Array(fillDataLength).fill('0').join('')
-  const _finalData = `00${finalData}${fillData}`.split('')
-  const finalArgs = []
-  while (_finalData.length > 0) {
-    finalArgs.push(_finalData.splice(0, 64).join(''))
-  }
+  const chunks = chunkString(`00${finalData}${fillData}`, 64)
   return [
-    `decompress(bytes32[${finalArgs.length}])`,
-    finalArgs.map(d => `0x${d}`)
+    `decompress(bytes32[${chunks.length}])`,
+    chunks.map(d => `0x${d}`)
   ]
 }
 
@@ -140,15 +136,38 @@ function compressDouble(calldata) {
   // otherwise split to bytes32[]
   const fillData = Array(fillDataLength).fill('0').join('')
   // 01 is the type byte
-  const finalData = `01${mainData}${fillData}${suffixData}`.split('')
-  const chunks = []
-  while (finalData.length > 0) {
-    chunks.push(finalData.splice(0, 64).join(''))
-  }
+  const finalData = `01${mainData}${fillData}${suffixData}`
+  const chunks = chunkString(finalData, 64)
   return [
     `decompress(bytes32[${chunks.length}])`,
     chunks.map(c => `0x${c}`)
   ]
+}
+
+function chunkString(str, chunkSize = 64) {
+  if (str.length % chunkSize !== 0) {
+    throw new Error('String cannot be chunked evenly')
+  }
+  const charArr = str.split('')
+  const chunks = []
+  for (;;) {
+    if (charArr.length === 0) return chunks
+    chunks.push(charArr.splice(0, chunkSize).join(''))
+  }
+}
+
+// accepts a structure function call for `data` (4 byte sig, 32 byte args)
+function testAddresses(data) {
+  // look for places where addresses can be substituted
+  const args = data.replace('0x', '').slice(8)
+  // now check every 32 byte value to see if it's an address (12 leading 0 bytes)
+  const chunks = chunkString(args)
+  const addresses = []
+  for (const chunk of chunks) {
+    if (!chunk.startsWith('000000000000000000000000')) continue
+    addresses.push('0x'+chunk.slice(24))
+  }
+  return addresses
 }
 
 function findBestZeroRepeat(data) {
