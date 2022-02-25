@@ -273,6 +273,7 @@ function findBestZeroRepeat(data) {
   let repeat = ''
   for (let x = 6; x < 255; x+=2) {
     const repeats = findRepeats(data, x)
+    if (Object.keys(repeats).length === 0) break
     for (const k of Object.keys(repeats)) {
       if (!/^0+$/.test(k)) {
         continue
