@@ -10,7 +10,7 @@ contract AddressRegistry {
     // find the number of zeroes in the address
     uint8 zeroCount = 0;
     for (uint8 x = 0; x < 20; x++) {
-      uint8 v = uint8(uint(bytes32(uint(a)) & bytes32(255 * 2**(8*x))) / 2**(8*x));
+      uint8 v = uint8(uint(bytes32(uint(uint160(a))) & bytes32(255 * 2**(8*x))) / 2**(8*x));
       if (v == 0) zeroCount++;
     }
     // if there are 16 or more zeroes it is more profitable to compress by the
