@@ -45,7 +45,7 @@ function compressSingle(calldata, options = {}) {
     // 3 bytes indicating the address id
     const opcode = `0002${subhex}`
     addressOpcodes[subByte] = opcode
-    const fullAddress = `000000000000000000000000${a.replace('0x', '')}`
+    const fullAddress = `${a.replace('0x', '')}000000000000000000000000`
     rawData = rawData.replace(new RegExp(fullAddress, 'g'), subByte)
   }
 

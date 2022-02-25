@@ -83,7 +83,7 @@ contract Decompress is AddressRegistry {
       assembly {
         mstore(
           add(add(add(dest, 32), destOffset), mul(x, 32)),
-          add(input, mul(x, 32))
+          mload(add(add(input, 32), mul(x, 32)))
         )
       }
     }
