@@ -25,5 +25,6 @@ contract Test is Decompressor {
 
   function testMethod3(address a) public {
     require(a != address(0));
+    wasEqual = false;
   }
 }

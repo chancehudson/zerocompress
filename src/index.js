@@ -51,7 +51,7 @@ function compressSingle(calldata, options = {}) {
 
   const bestSaving = findBestZeroRepeat(rawData)
   let offset = 0
-  const zeroSubByte = nextSubstitutionByte(subByte)
+  const zeroSubByte = subByte = nextSubstitutionByte(subByte)
   const zeroSubLength = new BN(bestSaving.length/2).toString(16, 2)
   for (;;) {
     if (bestSaving.length === 0) break
@@ -62,6 +62,22 @@ function compressSingle(calldata, options = {}) {
       if (rawData.indexOf(bestSaving, offset) !== offset) continue
       rawData = `${rawData.slice(0, index+1)}${zeroSubByte}${rawData.slice(index + 1 + bestSaving.length)}`
     } else rawData = `${rawData.slice(0, index)}${zeroSubByte}${rawData.slice(index + bestSaving.length)}`
+  }
+
+  // now do 0 subs if needed
+  // https://stackoverflow.com/questions/31147478/regex-that-only-matches-on-odd-even-indices
+  const zeroOpcodes = {}
+  const zeroTest = /(00){24,64}(?=(?:[\da-zA-Z]{2})*$)/
+  for (;;) {
+    const index = rawData.search(zeroTest)
+    if (index === -1) break
+    subByte = nextSubstitutionByte(subByte)
+    const [ match ] = rawData.match(zeroTest)
+    if (match.length % 2 !== 0) throw new Error('Invalid length')
+    const lengthHex = new BN(match.length/2).toString(16, 2)
+    const opcode = `00${lengthHex}`
+    zeroOpcodes[subByte] = opcode
+    rawData = `${rawData.slice(0, index)}${subByte}${rawData.slice(index+match.length)}`
   }
 
   const compressedBits = []
@@ -78,6 +94,9 @@ function compressSingle(calldata, options = {}) {
     } else if (addressOpcodes[byte]) {
       // address opcode
       uniqueBytes.push(addressOpcodes[byte])
+      compressedBits.push('1')
+    } else if (zeroOpcodes[byte]) {
+      uniqueBytes.push(zeroOpcodes[byte])
       compressedBits.push('1')
     } else if (zeroSubByte === byte) {
       uniqueBytes.push('0000')
@@ -249,7 +268,8 @@ function findAddresses(data) {
 }
 
 function findBestZeroRepeat(data) {
-  let bestSavings = 0
+  let longest = 0
+  // let bestSavings = 0
   let repeat = ''
   for (let x = 6; x < 255; x+=2) {
     const repeats = findRepeats(data, x)
@@ -258,11 +278,17 @@ function findBestZeroRepeat(data) {
         continue
       }
       const cost = gasCost(k)
-      const savings = cost * repeats[k] - (repeats[k] * 16 + 8 + 16)
-      if (savings > bestSavings) {
-        bestSavings = savings
+      // const savings = cost * repeats[k] - (repeats[k]*16 + 8 + 16)
+      // take the longest and rely on fixed zero subs for shorter values
+      if (k.length > longest) {
+        longest = k.length
         repeat = k
       }
+      // continue
+      // if (savings > bestSavings) {
+      //   bestSavings = savings
+      //   repeat = k
+      // }
     }
   }
   return repeat

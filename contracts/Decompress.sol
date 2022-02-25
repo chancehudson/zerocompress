@@ -113,6 +113,9 @@ contract Decompress is AddressRegistry {
         finalOffset
       );
       return (5, 32);
+    } else if (opcode >= 16 && opcode <= 64) {
+      // insert `opcode` number of 0 bytes
+      return (2, opcode);
     } else {
       revert('unknown opcode');
     }

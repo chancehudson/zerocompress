@@ -15,7 +15,7 @@ const { compressSingle } = require('../src')
     await test.swap(
       wallet.address,
       true,
-      1000000,
+      100290000000000,
       20192401,
       '0x00'
     ).then(t => t.wait())
@@ -24,7 +24,7 @@ const { compressSingle } = require('../src')
     const calldata = test.interface.encodeFunctionData('swap', [
       wallet.address,
       true,
-      1000000,
+      100290000000000,
       20192401,
       '0x00'
     ])
