@@ -4,6 +4,15 @@ pragma experimental ABIEncoderV2;
 
 import { AddressRegistry } from "./AddressRegistry.sol";
 
+interface OpcodeHandler {
+  function handleOpcode(
+    bytes memory data,
+    uint uniqueOffset,
+    bytes memory finalData,
+    uint finalOffset
+  ) external;
+}
+
 contract Decompress is AddressRegistry {
   /**
    * A 0 bit indicates a 0 byte
@@ -116,6 +125,19 @@ contract Decompress is AddressRegistry {
     } else if (opcode >= 16 && opcode <= 64) {
       // insert `opcode` number of 0 bytes
       return (2, opcode);
+    } else if (opcode > 170) {
+      (bool success, bytes memory data) = msg.sender.call(
+        abi.encodeWithSignature(
+          "handleOpcode(bytes,uint,bytes,uint)",
+          uniqueData,
+          uniqueOffset,
+          finalData,
+          finalOffset
+        )
+      );
+      require(success);
+      (uint48 u, uint24 d) = abi.decode(data, (uint48, uint24));
+      return (u, d);
     } else {
       revert('unknown opcode');
     }

@@ -23,7 +23,8 @@ A zero value in the `uniques` array indicates a special operation. The byte foll
 - [ ] `0x01(uint8 length)` - insert a repeat string of bytes specified at register 2
 - [x] `0x02(uint24 id)` - address insertion
 - [ ] `0x03(uint24 id)` - bls pubkey insertion (uint[4])
-- [x] `0x10-0xff` - for subclass use
+- [x] `0x0f-0x40` - Fixed length 0 insertion
+- [x] `0xaa-0xff` - for external use
 
 Registers are bytes at the end of the data.
 
