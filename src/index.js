@@ -111,9 +111,9 @@ function compressSingle(calldata, options = {}) {
       `0x${finalData}`
     ]
   }
-  const fillDataLength = 64 - ((finalData.length + 2) % 64)
+  const fillDataLength = 64 - ((finalData.length) % 64)
   const fillData = Array(fillDataLength).fill('0').join('')
-  const chunks = chunkString(`00${finalData.slice(0, -2)}${fillData}${zeroSubLength}`, 64)
+  const chunks = chunkString(`${finalData.slice(0, -2)}${fillData}${zeroSubLength}`, 64)
   return [
     `decompress(bytes32[${chunks.length}])`,
     chunks.map(d => `0x${d}`)
