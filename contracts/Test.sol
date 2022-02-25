@@ -8,9 +8,7 @@ contract Test is Decompressor {
   uint constant sum = 300;
   bool wasEqual = false;
 
-  constructor(address d) {
-    dec = d;
-  }
+  constructor(address d) Decompressor(d) {}
 
   function testMethod1(uint v1, uint v2, bool eq) public {
     require((v1 == v2) == eq, 't1');
@@ -23,8 +21,9 @@ contract Test is Decompressor {
     wasEqual = !wasEqual; // just to suppress the state mutability warning
   }
 
-  function testMethod3(address a) public {
-    require(a != address(0));
+  function testMethod3(address a, bytes32 h) public {
+    require(a != address(0), 'zer');
+    require(keccak256(abi.encode(a)) == h, 'ne');
     wasEqual = false;
   }
 }

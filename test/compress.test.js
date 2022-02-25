@@ -20,9 +20,11 @@ describe('decompressor', () => {
     const { test, decompress } = await getDeployedContracts()
     await decompress.connect(user).bindAddress(user.address).then(t => t.wait())
     const id = await decompress.idByAddress(user.address)
+    const hash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['address'], [user.address]))
+    await test.testMethod3(user.address, hash).then(t => t.wait())
     {
       const [func, data] = compressSingle(
-        test.interface.encodeFunctionData('testMethod3', [user.address]),
+        test.interface.encodeFunctionData('testMethod3', [user.address, hash]),
         {
           addressSubs: {
             [user.address]: id
@@ -32,7 +34,6 @@ describe('decompressor', () => {
       const tx = await test[func](data)
       await tx.wait()
     }
-    await test.testMethod3(user.address).then(t => t.wait())
   })
 
   it('should single compress and call a function', async () => {

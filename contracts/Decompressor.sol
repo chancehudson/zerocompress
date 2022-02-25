@@ -7,6 +7,10 @@ import "./Decompress.sol";
 contract Decompressor {
   address dec = address(0);
 
+  constructor(address d) {
+    dec = d;
+  }
+
   /**
    * Decompress and delegatecall self so msg.sender is preserved
    **/
