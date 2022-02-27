@@ -35,7 +35,18 @@ function compressSingle(calldata, options = {}) {
   // then during iteration below insert the opcode logic
   // returns de-duplicated addresses
   const addresses = findAddresses(rawData)
-    .filter(a => options.addressSubs[a] || options.addressSubs['*'])
+    .filter(a => {
+      if (options.addressSubs['*']) {
+        // check to make sure it's address-ey
+        if (a.split('').filter(c => c === '0').length > 5) {
+          return false
+        } else {
+          return true
+        }
+      } else {
+        return options.addressSubs[a]
+      }
+    })
   const addressOpcodes = {}
   let subByte
 
