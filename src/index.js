@@ -34,7 +34,8 @@ function compressSingle(calldata, options = {}) {
   // first look for addresses, then replace them with a marker
   // then during iteration below insert the opcode logic
   // returns de-duplicated addresses
-  const addresses = findAddresses(rawData).filter(a => options.addressSubs[a])
+  const addresses = findAddresses(rawData)
+    .filter(a => options.addressSubs[a] || options.addressSubs['*'])
   const addressOpcodes = {}
   let subByte
 
@@ -254,12 +255,10 @@ function nextSubstitutionByte(current) {
 function findAddresses(data) {
   const args = data.replace('0x', '').slice(8)
   // now check every 32 byte value to see if it's an address (12 leading 0 bytes)
-  const chunks = chunkString(args)
-  const addresses = []
-  for (const chunk of chunks) {
-    if (!chunk.startsWith('000000000000000000000000')) continue
-    addresses.push('0x'+chunk.slice(24))
-  }
+  const addressRegex = /(0{24}[a-fA-F0-9]{40})(?=(?:[\da-zA-Z]{2})*$)/
+  const _addresses = data.match(addressRegex)
+  if (_addresses === null) return []
+  const addresses = _addresses.map(a => `0x${a.slice(24)}`)
   const dupes = {}
   // dedupe
   return addresses.filter(a => {
