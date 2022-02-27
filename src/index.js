@@ -3,8 +3,10 @@ const { ethers } = require('ethers')
 const RegistryABI = require('./AddressRegistryABI.json')
 
 module.exports = {
+  compress: compressSingle,
   compressSingle,
   compressDouble,
+  gasCost,
 }
 
 /**
