@@ -147,7 +147,29 @@ function compressSingle(calldata, options = {}) {
   // now convert the binary to hex and abi encode the unique bytes
   const reverse = (str) => str.split('').reverse().join('')
   const bytes = []
-  const _compressedBits = compressedBits.join('')
+  let _compressedBits = compressedBits.join('')
+  // regex to look for bits at the end
+  const lastBit = _compressedBits[_compressedBits.length - 1]
+  const trailingBits = new RegExp(`${lastBit}+$`)
+  const [ match ] = _compressedBits.match(trailingBits)
+  _compressedBits = _compressedBits.slice(0, -1 * match.length)
+  // the last bit has to be the same for us to make an inference
+  // if there are 7 bits in the last word we'll pad below so don't worry about
+  // it here
+  if (_compressedBits[_compressedBits.length - 1] !== lastBit && _compressedBits.length % 8 !== 7) {
+    _compressedBits = _compressedBits + lastBit
+  }
+  // pad the byte if we are inserting 1's so we don't get 0 padded
+  if (lastBit === '1' && _compressedBits.length % 8 !== 0) {
+    // we need to make sure the bit array is %8=0 so no trailing 0's are added
+    const insert = 8 - _compressedBits.length % 8
+    _compressedBits = _compressedBits + Array(insert).fill('1').join('')
+  }
+  // the default is 1 so if there is no data we need to insert 0's if the last
+  // bit is 0
+  if (_compressedBits.length === 0 && lastBit === '0') {
+    _compressedBits = Array(8).fill('0').join('')
+  }
   for (let x = 0; x < _compressedBits.length / 8; x++) {
     const byte = new BN(
       reverse(_compressedBits.slice(x * 8, x * 8 + 8)),

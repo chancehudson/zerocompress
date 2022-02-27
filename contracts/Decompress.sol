@@ -42,6 +42,7 @@ contract Decompress is AddressRegistry {
     // 1 bits per item
     // do an AND then shift
     // start at a 5 byte offset
+    bool lastBit = true;
     uint8 offset = 4;
     /* uint24 finalDataOffset = 0; */
     uint48 zeroOffset = 0;
@@ -49,6 +50,7 @@ contract Decompress is AddressRegistry {
       // all zeroes in this byte, skip it
       if (uint8(data[x]) == 0) {
         zeroOffset += 8;
+        lastBit = false;
         continue;
       }
       for (uint8 y; y < 8; y++) {
@@ -59,10 +61,12 @@ contract Decompress is AddressRegistry {
         uint8 thisVal = uint8(data[x] & bytes1(uint8(2**y))) / uint8(2**y);
         // if non-zero add the unique value
         if (thisVal == 0) {
+          lastBit = false;
           zeroOffset++;
           continue;
         }
         assert(thisVal == 1);
+        lastBit = true;
         if (uint8(data[uniqueStart + latestUnique]) == 0) {
           // it's an opcode
           (uint48 uniqueIncr, uint24 dataIncr) = handleOpcode(
@@ -76,6 +80,22 @@ contract Decompress is AddressRegistry {
         } else {
           finalData[zeroOffset++] = data[uniqueStart + latestUnique++];
         }
+      }
+    }
+    while (zeroOffset < finalLength) {
+      if (!lastBit) break;
+      if (uint8(data[uniqueStart + latestUnique]) == 0) {
+        // it's an opcode
+        (uint48 uniqueIncr, uint24 dataIncr) = handleOpcode(
+          data,
+          uniqueStart + latestUnique,
+          finalData,
+          zeroOffset
+        );
+        latestUnique += uniqueIncr;
+        zeroOffset += dataIncr;
+      } else {
+        finalData[zeroOffset++] = data[uniqueStart + latestUnique++];
       }
     }
     return finalData;
