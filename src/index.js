@@ -152,11 +152,15 @@ function compressSingle(calldata, options = {}) {
   const lastBit = _compressedBits[_compressedBits.length - 1]
   const trailingBits = new RegExp(`${lastBit}+$`)
   const [ match ] = _compressedBits.match(trailingBits)
-  _compressedBits = _compressedBits.slice(0, -1 * match.length)
+  if (match.length === _compressedBits.length) {
+    _compressedBits = ''
+  } else {
+    _compressedBits = _compressedBits.slice(0, -1 * match.length)
+  }
   // the last bit has to be the same for us to make an inference
   // if there are 7 bits in the last word we'll pad below so don't worry about
   // it here
-  if (_compressedBits[_compressedBits.length - 1] !== lastBit && _compressedBits.length % 8 !== 7) {
+  if (_compressedBits[_compressedBits.length - 1] !== lastBit && _compressedBits.length % 8 !== 7 && _compressedBits.length !== 0) {
     _compressedBits = _compressedBits + lastBit
   }
   // pad the byte if we are inserting 1's so we don't get 0 padded
