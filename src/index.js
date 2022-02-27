@@ -2,6 +2,12 @@ const BN = require('bn.js')
 const { ethers } = require('ethers')
 const RegistryABI = require('./AddressRegistryABI.json')
 
+/**
+ * Leading bit indicating whether a 0 indicates a 0 or 1
+ * Cut trailing bits if they're all the same
+ * Fixed length 0xff byte insertion
+ **/
+
 module.exports = {
   compress: compressSingle,
   compressSingle,
@@ -94,6 +100,21 @@ function compressSingle(calldata, options = {}) {
     rawData = `${rawData.slice(0, index)}${subByte}${rawData.slice(index+match.length)}`
   }
 
+  // now do 0xff subs if needed
+  const maxOpcodes = {}
+  const maxTest = /(ff){4,88}(?=(?:[\da-zA-Z]{2})*$)/
+  for (;;) {
+    const index = rawData.search(maxTest)
+    if (index === -1) break
+    subByte = nextSubstitutionByte(subByte)
+    const [ match ] = rawData.match(maxTest)
+    if (match.length % 2 !== 0) throw new Error('Invalid length')
+    const lengthHex = new BN(65 + match.length/2).toString(16, 2)
+    const opcode = `00${lengthHex}`
+    maxOpcodes[subByte] = opcode
+    rawData = `${rawData.slice(0, index)}${subByte}${rawData.slice(index+match.length)}`
+  }
+
   const compressedBits = []
   // can be strings of arbitrary length (%2=0) hex, not just single bytes
   const uniqueBytes = []
@@ -111,6 +132,9 @@ function compressSingle(calldata, options = {}) {
       compressedBits.push('1')
     } else if (zeroOpcodes[byte]) {
       uniqueBytes.push(zeroOpcodes[byte])
+      compressedBits.push('1')
+    } else if (maxOpcodes[byte]) {
+      uniqueBytes.push(maxOpcodes[byte])
       compressedBits.push('1')
     } else if (zeroSubByte === byte) {
       uniqueBytes.push('0000')

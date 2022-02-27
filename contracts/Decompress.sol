@@ -125,6 +125,13 @@ contract Decompress is AddressRegistry {
     } else if (opcode >= 16 && opcode <= 64) {
       // insert `opcode` number of 0 bytes
       return (2, opcode);
+    } else if (opcode >= 65 && opcode <= 109) {
+      // insert 0xff bytes
+      uint8 length = opcode - 65;
+      for (uint8 x; x < length; x++) {
+        finalData[finalOffset+x] = bytes1(0xff);
+      }
+      return (2, length);
     /* } else if (opcode > 170) { */
       /* (bool success, bytes memory data) = msg.sender.call(
         abi.encodeWithSignature(
