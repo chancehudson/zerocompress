@@ -125,8 +125,8 @@ contract Decompress is AddressRegistry {
     } else if (opcode >= 16 && opcode <= 64) {
       // insert `opcode` number of 0 bytes
       return (2, opcode);
-    } else if (opcode > 170) {
-      (bool success, bytes memory data) = msg.sender.call(
+    /* } else if (opcode > 170) { */
+      /* (bool success, bytes memory data) = msg.sender.call(
         abi.encodeWithSignature(
           "handleOpcode(bytes,uint,bytes,uint)",
           uniqueData,
@@ -136,8 +136,8 @@ contract Decompress is AddressRegistry {
         )
       );
       require(success);
-      (uint48 u, uint24 d) = abi.decode(data, (uint48, uint24));
-      return (u, d);
+      (uint48 u, uint24 d) = abi.decode(data, (uint48, uint24)); */
+      /* return (u, d); */
     } else {
       revert('unknown opcode');
     }
