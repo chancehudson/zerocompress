@@ -364,7 +364,7 @@ function findAddresses(data) {
 
 function findBestZeroRepeat(data) {
   let longest = 0
-  let bestSavings = 0
+  // let bestSavings = 0
   let repeat = ''
   for (let x = 6; x < 255; x+=2) {
     const repeats = findRepeats(data, x)
@@ -376,15 +376,15 @@ function findBestZeroRepeat(data) {
       const cost = gasCost(k)
       const savings = cost * repeats[k] - (repeats[k]*16 + 8 + 16)
       // take the longest and rely on fixed zero subs for shorter values
-      // if (k.length > longest) {
-      //   longest = k.length
-      //   repeat = k
-      // }
-      // continue
-      if (savings > bestSavings) {
-        bestSavings = savings
+      if (k.length > longest) {
+        longest = k.length
         repeat = k
       }
+      // continue
+      // if (savings > bestSavings) {
+      //   bestSavings = savings
+      //   repeat = k
+      // }
     }
   }
   return repeat
