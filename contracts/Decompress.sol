@@ -31,11 +31,40 @@ contract Decompress is AddressRegistry {
     masks[6] = 64;
     masks[7] = 128; */
 
-    // take a 16 bit uint off the front of the data
-    uint24 dataLength = uint24(uint8(data[0]) * 2 ** 8) + uint24(uint8(data[1]));
-    // then a 16 bit uint after that
-    uint16 finalLength = uint16(uint16(uint8(data[2])) * 2 ** 8) + uint16(uint8(data[3]));
-    uint48 uniqueStart = 4 + dataLength;
+    // first byte sets arguments
+    // first bit: indicates whether 0 or 1 indicates a zero byte (default 0)
+    // bits 2-3: indicates length of data array
+    // bits 4-5: indicates length of final array
+    // bits 6-8: used for data length (if possible), bits 2-3 will be 0
+    uint24 dataLength;
+    uint24 finalLength;
+    uint48 uniqueStart;
+    uint8 offset;
+    {
+      // 01100000 - 6
+      // bit shift once
+      uint8 dataBytesLength = uint8(data[0] & bytes1(uint8(6))) / 2;
+      // 00011000 - 24
+      // bit shift 3 times
+      uint8 finalBytesLength = uint8(data[0] & bytes1(uint8(24))) / 8;
+      if (dataBytesLength == uint8(0)) {
+        // maybe it's set here
+        // 00000111 - 224
+        // bit shift 5 times
+        dataLength = uint8(data[0] & bytes1(uint8(224))) / 32;
+      } else {
+        // extract N bits
+        for (uint8 x = dataBytesLength; x > 0; --x) {
+          dataLength += uint24(uint8(data[x]) * 2 ** (8*(dataBytesLength - x)));
+        }
+      }
+      for (uint8 x = finalBytesLength; x > 0; --x) {
+        finalLength += uint24(uint8(data[x + dataBytesLength]) * 2 ** (8*(finalBytesLength - x)));
+      }
+      offset = dataBytesLength + finalBytesLength + 1;
+      uniqueStart = offset + dataLength;
+    }
+
     bytes memory finalData = new bytes(finalLength);
 
     uint48 latestUnique = 0;
@@ -43,7 +72,6 @@ contract Decompress is AddressRegistry {
     // do an AND then shift
     // start at a 5 byte offset
     bool lastBit = true;
-    uint8 offset = 4;
     /* uint24 finalDataOffset = 0; */
     uint48 zeroOffset = 0;
     for (uint48 x = offset; x < dataLength + offset; x++) {

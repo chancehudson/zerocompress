@@ -183,10 +183,38 @@ function compressSingle(calldata, options = {}) {
   }
   const _data = bytes.join('')
   const uniqueData = uniqueBytes.join('')
-  // now store a length identifier in a uint24, supports a length of 16 MB
-  const dataLength = new BN(_data.length / 2).toString(16, 4)
-  const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
-  const finalData = `${dataLength}${finalLength}${_data}${uniqueData}${zeroSubLength}`
+  // now store length identifiers as short as needed
+  // must exactly match the logic in the smart contract
+  let dataLength, finalLength
+  let dataBytesLength, finalBytesLength, dataLengthBits
+  if (_data.length / 2 <= 8) {
+    // can store in the leading byte
+    dataLengthBits = reverse(new BN(_data.length / 2).toString(2, 3))
+    dataBytesLength = '00'
+    dataLength = ''
+  } else {
+    // need to store in trailing bytes
+    dataLengthBits = '000'
+    const bytesNeeded = (_data.length / 2) < 256 ? 1 : 2
+    dataBytesLength = bytesNeeded === 1 ? '10' : '01'
+    dataLength = new BN(_data.length / 2).toString(16, bytesNeeded * 2)
+  }
+  const calldataByteLength = calldata.replace('0x', '').length / 2
+  if (calldataByteLength < 256) {
+    finalBytesLength = '10'
+    finalLength = new BN(calldataByteLength).toString(16, 2)
+  } else if (calldataByteLength >= 256 && calldataByteLength < 65536) {
+    finalBytesLength = '01'
+    finalLength = new BN(calldataByteLength).toString(16, 4)
+  } else {
+    finalBytesLength = '11'
+    finalLength = new BN(calldataByteLength).toString(16, 6)
+  }
+  const configByte = new BN(
+    reverse(`0${dataBytesLength}${finalBytesLength}${dataLengthBits}`),
+    2
+  ).toString(16, 2)
+  const finalData = `${configByte}${dataLength}${finalLength}${_data}${uniqueData}${zeroSubLength}`
   const MAX_LENGTH = (32 * 32 * 2 - 1) // subtract one to account for type byte
   if (finalData.length > MAX_LENGTH) {
     return [
@@ -194,9 +222,14 @@ function compressSingle(calldata, options = {}) {
       `0x${finalData}`
     ]
   }
-  const fillDataLength = 64 - ((finalData.length) % 64)
-  const fillData = Array(fillDataLength).fill('0').join('')
-  const chunks = chunkString(`${finalData.slice(0, -2)}${fillData}${zeroSubLength}`, 64)
+  const chunks = []
+  if (finalData.length % 64 !== 0) {
+    const fillDataLength = 64 - ((finalData.length) % 64)
+    const fillData = Array(fillDataLength).fill('0').join('')
+    chunks.push(...chunkString(`${finalData.slice(0, -2)}${fillData}${zeroSubLength}`, 64))
+  } else {
+    chunks.push(...chunkString(finalData, 64))
+  }
   return [
     `decompress(bytes32[${chunks.length}])`,
     chunks.map(d => `0x${d}`)
@@ -331,7 +364,7 @@ function findAddresses(data) {
 
 function findBestZeroRepeat(data) {
   let longest = 0
-  // let bestSavings = 0
+  let bestSavings = 0
   let repeat = ''
   for (let x = 6; x < 255; x+=2) {
     const repeats = findRepeats(data, x)
@@ -341,17 +374,17 @@ function findBestZeroRepeat(data) {
         continue
       }
       const cost = gasCost(k)
-      // const savings = cost * repeats[k] - (repeats[k]*16 + 8 + 16)
+      const savings = cost * repeats[k] - (repeats[k]*16 + 8 + 16)
       // take the longest and rely on fixed zero subs for shorter values
-      if (k.length > longest) {
-        longest = k.length
-        repeat = k
-      }
-      // continue
-      // if (savings > bestSavings) {
-      //   bestSavings = savings
+      // if (k.length > longest) {
+      //   longest = k.length
       //   repeat = k
       // }
+      // continue
+      if (savings > bestSavings) {
+        bestSavings = savings
+        repeat = k
+      }
     }
   }
   return repeat
