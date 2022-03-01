@@ -213,7 +213,7 @@ function compress(calldata, options = {}) {
   // must exactly match the logic in the smart contract
   let dataLength, finalLength
   let dataBytesLength, finalBytesLength, dataLengthBits
-  if (_data.length / 2 <= 8) {
+  if (_data.length / 2 < 8) {
     // can store in the leading byte
     dataLengthBits = reverse(new BN(_data.length / 2).toString(2, 3))
     dataBytesLength = '00'

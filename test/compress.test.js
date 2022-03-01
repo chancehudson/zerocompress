@@ -117,6 +117,22 @@ describe('decompressor', () => {
     }
   })
 
+  it('should compress sequential length data', async () => {
+    const { test } = await getDeployedContracts()
+    const bytes = ['0x']
+    for (let x = 0; x < 1030; x++) {
+      bytes.push(Math.random() < 0.5 ? '01' : '00')
+      const byteString = bytes.join('')
+      if (x > 50 && x < 1020) continue
+      const hash = ethers.utils.keccak256(byteString)
+      const [func, data] = compress(
+        test.interface.encodeFunctionData('testMethod2', [byteString, hash])
+      )
+      const tx = await test[func](data)
+      await tx.wait()
+    }
+  })
+
   it('should recursively compress and call function', async () => {
     const { test } = await getDeployedContracts()
     const v1 = 150
