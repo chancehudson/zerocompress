@@ -259,7 +259,8 @@ function compress(calldata, options = {}) {
   }
   return [
     `decompress(bytes32[${chunks.length}])`,
-    chunks.map(d => `0x${d}`)
+    chunks.map(d => `0x${d}`),
+    finalData.length % 64 === 0 ? 0 : (64 - ((finalData.length) % 64))/2 // number of padding bytes
   ]
 }
 
