@@ -57,11 +57,38 @@ function compress(calldata, options = {}) {
   for (const a of addresses) {
     subByte = nextSubstitutionByte(subByte)
     // re-pad it and insert a marker
-    const subhex = new BN(options.addressSubs[a]).toString(16, 6)
+    let opcode
+    if (options.addressSubs[a] < 2**8) {
+      // 1 byte
+      const op = new BN(110).toString(16, 2)
+      const subhex = new BN(options.addressSubs[a]).toString(16, 2)
+      opcode = `00${op}${subhex}`
+    } else if (options.addressSubs[a] < 2**16) {
+      // 2 bytes
+      const op = new BN(111).toString(16, 2)
+      const subhex = new BN(options.addressSubs[a]).toString(16, 4)
+      opcode = `00${op}${subhex}`
+    } else if (options.addressSubs[a] < 2**24) {
+      // 3 bytes
+      const op = new BN(112).toString(16, 2)
+      const subhex = new BN(options.addressSubs[a]).toString(16, 6)
+      opcode = `00${op}${subhex}`
+    } else if (options.addressSubs[a] < 2**32) {
+      // 4 bytes
+      const op = new BN(114).toString(16, 2)
+      const subhex = new BN(options.addressSubs[a]).toString(16, 8)
+      opcode = `00${op}${subhex}`
+    } else if (options.addressSubs[a] < 2**40) {
+      // 5 bytes
+      const op = new BN(115).toString(16, 2)
+      const subhex = new BN(options.addressSubs[a]).toString(16, 10)
+      opcode = `00${op}${subhex}`
+    } else {
+      throw new Error('Address sub number is out of range')
+    }
     // leading 00 to indicate an opcode
     // opcode 02 indicating address replacement
     // 3 bytes indicating the address id
-    const opcode = `0002${subhex}`
     addressOpcodes[subByte] = opcode
     const fullAddress = `${a.replace('0x', '')}000000000000000000000000`
     rawData = rawData.replace(new RegExp(fullAddress, 'g'), subByte)

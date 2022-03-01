@@ -3,7 +3,7 @@ const assert = require('assert')
 const { compress } = require('../src')
 
 async function getDeployedContracts() {
-  const Decompress = await ethers.getContractFactory('Decompress')
+  const Decompress = await ethers.getContractFactory('DecompressTest')
   const decompress = await Decompress.deploy()
   await decompress.deployed()
 
@@ -23,6 +23,38 @@ describe('decompressor', () => {
     const hash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['address'], [user.address]))
     await test.testMethod3(user.address, hash).then(t => t.wait())
     {
+      const [func, data] = compress(
+        test.interface.encodeFunctionData('testMethod3', [user.address, hash]),
+        {
+          addressSubs: {
+            [user.address]: id
+          }
+        }
+      )
+      const tx = await test[func](data)
+      await tx.wait()
+    }
+  })
+
+  it('should compress variable size address ids', async () => {
+    const [ user ] = await ethers.getSigners()
+    const { test, decompress } = await getDeployedContracts()
+    const ids = [
+      Math.floor(Math.random() * 2 ** 8),
+      2**8 + Math.floor(Math.random() * 2 ** 8),
+      2**16 + Math.floor(Math.random() * 2 ** 16),
+      2**24 + Math.floor(Math.random() * 2 ** 24),
+      2**32 + Math.floor(Math.random() * 2 ** 32)
+    ]
+    for (const id of ids) {
+      await decompress
+        .connect(user)
+        .bindAddressExact(user.address, id)
+        .then(t => t.wait())
+    }
+    const hash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['address'], [user.address]))
+    await test.testMethod3(user.address, hash).then(t => t.wait())
+    for (const id of ids) {
       const [func, data] = compress(
         test.interface.encodeFunctionData('testMethod3', [user.address, hash]),
         {

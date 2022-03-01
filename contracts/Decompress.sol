@@ -154,23 +154,10 @@ contract Decompress is AddressRegistry {
   ) internal view returns (uint48, uint24) {
     uint8 opcode = uint8(uniqueData[uniqueOffset + 1]);
     if (opcode == uint8(0)) {
-      // insert 0's
+      // insert 0's specified by number at end of data
       uint8 count = uint8(uniqueData[uniqueData.length - 1]);
       return (2, count);
-    } else if (opcode == uint8(2)) {
-      // address replacement
-      uint24 id = uint24(
-        uint8(uniqueData[uniqueOffset+2]) * 2 ** 16) + uint24(uint8(uniqueData[uniqueOffset+3]) * 2 ** 8) + uint24(uint8(uniqueData[uniqueOffset+4])
-      );
-      address a = addressById[id];
-      require(a != address(0), 'address not set');
-      copyData(
-        bytes32ToBytes(bytes32(bytes20(a))),
-        finalData,
-        finalOffset
-      );
-      return (5, 32);
-    } else if (opcode >= 16 && opcode <= 64) {
+    } else if (opcode >= 1 && opcode <= 64) {
       // insert `opcode` number of 0 bytes
       return (2, opcode);
     } else if (opcode >= 65 && opcode <= 109) {
@@ -180,6 +167,21 @@ contract Decompress is AddressRegistry {
         finalData[finalOffset+x] = bytes1(0xff);
       }
       return (2, length);
+    } else if (opcode >= 110 && opcode <= 114) {
+      uint8 byteCount = (opcode - 110) + 1;
+      // address replacement (N bytes)
+      uint40 id;
+      for (uint8 x = byteCount; x > 0; --x) {
+        id += uint40(uint8(finalData[x + finalOffset]) * 2 ** (8*(byteCount - x)));
+      }
+      address a = addressById[id];
+      require(a != address(0), 'address not set');
+      copyData(
+        bytes32ToBytes(bytes32(bytes20(a))),
+        finalData,
+        finalOffset
+      );
+      return (2+byteCount, 32);
     /* } else if (opcode > 170) { */
       /* (bool success, bytes memory data) = msg.sender.call(
         abi.encodeWithSignature(
