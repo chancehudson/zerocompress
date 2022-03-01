@@ -168,16 +168,17 @@ contract Decompress is AddressRegistry {
       }
       return (2, length);
     } else if (opcode >= 110 && opcode <= 114) {
+      uint idStart = uniqueOffset + 2;
       uint8 byteCount = (opcode - 110) + 1;
       // address replacement (N bytes)
       uint40 id;
-      for (uint8 x = byteCount; x > 0; --x) {
-        id += uint40(uint8(finalData[x + finalOffset]) * 2 ** (8*(byteCount - x)));
+      for (uint8 x; x < byteCount; x++) {
+        id += uint40(uint8(uniqueData[idStart+x]) * 2 ** (8*(byteCount-x-1)));
       }
       address a = addressById[id];
       require(a != address(0), 'address not set');
       copyData(
-        bytes32ToBytes(bytes32(bytes20(a))),
+        bytes32ToBytes(bytes32(uint(a))),
         finalData,
         finalOffset
       );

@@ -44,7 +44,8 @@ describe('decompressor', () => {
       2**8 + Math.floor(Math.random() * 2 ** 8),
       2**16 + Math.floor(Math.random() * 2 ** 16),
       2**24 + Math.floor(Math.random() * 2 ** 24),
-      2**32 + Math.floor(Math.random() * 2 ** 32)
+      2**32 + Math.floor(Math.random() * 2 ** 32),
+      2**40 - 50
     ]
     for (const id of ids) {
       await decompress

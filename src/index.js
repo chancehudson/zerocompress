@@ -76,12 +76,12 @@ function compress(calldata, options = {}) {
       opcode = `00${op}${subhex}`
     } else if (id < 2**32) {
       // 4 bytes
-      const op = new BN(114).toString(16, 2)
+      const op = new BN(113).toString(16, 2)
       const subhex = new BN(id).toString(16, 8)
       opcode = `00${op}${subhex}`
     } else if (id < 2**40) {
       // 5 bytes
-      const op = new BN(115).toString(16, 2)
+      const op = new BN(114).toString(16, 2)
       const subhex = new BN(id).toString(16, 10)
       opcode = `00${op}${subhex}`
     } else {
@@ -91,7 +91,7 @@ function compress(calldata, options = {}) {
     // opcode 02 indicating address replacement
     // 3 bytes indicating the address id
     addressOpcodes[subByte] = opcode
-    const fullAddress = `${a.replace('0x', '')}000000000000000000000000`
+    const fullAddress = `000000000000000000000000${a.replace('0x', '')}`
     rawData = rawData.replace(new RegExp(fullAddress, 'g'), subByte)
   }
 
