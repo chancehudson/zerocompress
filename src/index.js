@@ -35,7 +35,24 @@ function compress(calldata, options = {}) {
   }, {})
   // now do single bit compression
   let rawData = calldata.replace('0x', '').toLowerCase()
-  // first look for addresses, then replace them with a marker
+  let subByte
+
+  // do 0xff subs if needed
+  const maxOpcodes = {}
+  const maxTest = /(ff){4,88}(?=(?:[\da-zA-Z]{2})*$)/
+  for (;;) {
+    const index = rawData.search(maxTest)
+    if (index === -1) break
+    subByte = nextSubstitutionByte(subByte)
+    const [ match ] = rawData.match(maxTest)
+    if (match.length % 2 !== 0) throw new Error('Invalid length')
+    const lengthHex = new BN(65 + match.length/2).toString(16, 2)
+    const opcode = `00${lengthHex}`
+    maxOpcodes[subByte] = opcode
+    rawData = `${rawData.slice(0, index)}${subByte}${rawData.slice(index+match.length)}`
+  }
+
+  // look for addresses, then replace them with a marker
   // then during iteration below insert the opcode logic
   // returns de-duplicated addresses
   const addresses = findAddresses(rawData)
@@ -51,9 +68,8 @@ function compress(calldata, options = {}) {
         return options.addressSubs[a]
       }
     })
-  const addressOpcodes = {}
-  let subByte
 
+  const addressOpcodes = {}
   for (const a of addresses) {
     const id = options.addressSubs[a] || options.addressSubs['*']
     subByte = nextSubstitutionByte(subByte)
@@ -123,21 +139,6 @@ function compress(calldata, options = {}) {
     const lengthHex = new BN(match.length/2).toString(16, 2)
     const opcode = `00${lengthHex}`
     zeroOpcodes[subByte] = opcode
-    rawData = `${rawData.slice(0, index)}${subByte}${rawData.slice(index+match.length)}`
-  }
-
-  // now do 0xff subs if needed
-  const maxOpcodes = {}
-  const maxTest = /(ff){4,88}(?=(?:[\da-zA-Z]{2})*$)/
-  for (;;) {
-    const index = rawData.search(maxTest)
-    if (index === -1) break
-    subByte = nextSubstitutionByte(subByte)
-    const [ match ] = rawData.match(maxTest)
-    if (match.length % 2 !== 0) throw new Error('Invalid length')
-    const lengthHex = new BN(65 + match.length/2).toString(16, 2)
-    const opcode = `00${lengthHex}`
-    maxOpcodes[subByte] = opcode
     rawData = `${rawData.slice(0, index)}${subByte}${rawData.slice(index+match.length)}`
   }
 
