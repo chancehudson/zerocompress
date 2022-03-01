@@ -162,19 +162,19 @@ contract Decompress is AddressRegistry {
       // insert 0's specified by number at end of data
       uint8 count = uint8(uniqueData[uniqueData.length - 1]);
       return (2, count);
-    } else if (opcode >= 1 && opcode <= 64) {
+    } else if (opcode >= 1 && opcode <= 224) {
       // insert `opcode` number of 0 bytes
       return (2, opcode);
-    } else if (opcode >= 65 && opcode <= 109) {
+    } else if (opcode >= 225 && opcode <= 241) {
       // insert 0xff bytes
-      uint8 length = opcode - 65;
+      uint8 length = (opcode - 225) + 16;
       for (uint8 x; x < length; x++) {
         finalData[finalOffset+x] = bytes1(0xff);
       }
       return (2, length);
-    } else if (opcode >= 110 && opcode <= 114) {
+    } else if (opcode >= 242 && opcode <= 246) {
       uint idStart = uniqueOffset + 2;
-      uint8 byteCount = (opcode - 110) + 1;
+      uint8 byteCount = (opcode - 242) + 1;
       // address replacement (N bytes)
       uint40 id;
       for (uint8 x; x < byteCount; x++) {

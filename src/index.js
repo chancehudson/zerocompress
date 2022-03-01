@@ -39,14 +39,15 @@ function compress(calldata, options = {}) {
 
   // do 0xff subs if needed
   const maxOpcodes = {}
-  const maxTest = /(ff){4,88}(?=(?:[\da-zA-Z]{2})*$)/
+  const maxTest = /(ff){16,32}(?=(?:[\da-zA-Z]{2})*$)/
   for (;;) {
-    const index = rawData.search(maxTest)
-    if (index === -1) break
+    const r = maxTest.exec(rawData)
+    if (r === null) break
+    const { index } = r
+    const [ match ] = r
     subByte = nextSubstitutionByte(subByte)
-    const [ match ] = rawData.match(maxTest)
     if (match.length % 2 !== 0) throw new Error('Invalid length')
-    const lengthHex = new BN(65 + match.length/2).toString(16, 2)
+    const lengthHex = new BN(225 + (match.length/2 - 16)).toString(16, 2)
     const opcode = `00${lengthHex}`
     maxOpcodes[subByte] = opcode
     rawData = `${rawData.slice(0, index)}${subByte}${rawData.slice(index+match.length)}`
@@ -77,27 +78,27 @@ function compress(calldata, options = {}) {
     let opcode
     if (id < 2**8) {
       // 1 byte
-      const op = new BN(110).toString(16, 2)
+      const op = new BN(242).toString(16, 2)
       const subhex = new BN(id).toString(16, 2)
       opcode = `00${op}${subhex}`
     } else if (id < 2**16) {
       // 2 bytes
-      const op = new BN(111).toString(16, 2)
+      const op = new BN(243).toString(16, 2)
       const subhex = new BN(id).toString(16, 4)
       opcode = `00${op}${subhex}`
     } else if (id < 2**24) {
       // 3 bytes
-      const op = new BN(112).toString(16, 2)
+      const op = new BN(244).toString(16, 2)
       const subhex = new BN(id).toString(16, 6)
       opcode = `00${op}${subhex}`
     } else if (id < 2**32) {
       // 4 bytes
-      const op = new BN(113).toString(16, 2)
+      const op = new BN(245).toString(16, 2)
       const subhex = new BN(id).toString(16, 8)
       opcode = `00${op}${subhex}`
     } else if (id < 2**40) {
       // 5 bytes
-      const op = new BN(114).toString(16, 2)
+      const op = new BN(246).toString(16, 2)
       const subhex = new BN(id).toString(16, 10)
       opcode = `00${op}${subhex}`
     } else {
@@ -111,35 +112,43 @@ function compress(calldata, options = {}) {
     rawData = rawData.replace(new RegExp(fullAddress, 'g'), subByte)
   }
 
-  const bestSaving = findBestZeroRepeat(rawData)
-  let offset = 0
-  const zeroSubByte = subByte = nextSubstitutionByte(subByte)
-  const zeroSubLength = new BN(bestSaving.length/2).toString(16, 2)
-  for (;;) {
-    if (bestSaving.length === 0) break
-    const index = rawData.indexOf(bestSaving, offset)
-    if (index === -1) break
-    if (index % 2 === 1) {
-      offset = index + 1
-      if (rawData.indexOf(bestSaving, offset) !== offset) continue
-      rawData = `${rawData.slice(0, index+1)}${zeroSubByte}${rawData.slice(index + 1 + bestSaving.length)}`
-    } else rawData = `${rawData.slice(0, index)}${zeroSubByte}${rawData.slice(index + bestSaving.length)}`
-  }
-
   // now do 0 subs if needed
   // https://stackoverflow.com/questions/31147478/regex-that-only-matches-on-odd-even-indices
   const zeroOpcodes = {}
-  const zeroTest = /(00){24,64}(?=(?:[\da-zA-Z]{2})*$)/
+  const bytesByOpcode = {}
+  const zeroTest = /(00){24,224}(?=(?:[\da-zA-Z]{2})*$)/
+  let zeroSubLength = ''
   for (;;) {
-    const index = rawData.search(zeroTest)
-    if (index === -1) break
-    subByte = nextSubstitutionByte(subByte)
-    const [ match ] = rawData.match(zeroTest)
+    const r = zeroTest.exec(rawData)
+    if (r === null) break
+    const { index } = r
+    const [ match ] = r
     if (match.length % 2 !== 0) throw new Error('Invalid length')
     const lengthHex = new BN(match.length/2).toString(16, 2)
     const opcode = `00${lengthHex}`
-    zeroOpcodes[subByte] = opcode
-    rawData = `${rawData.slice(0, index)}${subByte}${rawData.slice(index+match.length)}`
+    if (!bytesByOpcode[opcode]) {
+      subByte = nextSubstitutionByte(subByte)
+      zeroOpcodes[subByte] = opcode
+      bytesByOpcode[opcode] = subByte
+    }
+    rawData = `${rawData.slice(0, index)}${bytesByOpcode[opcode]}${rawData.slice(index+match.length)}`
+  }
+  {
+    // determine if we should use the 0000 opcode
+    let sub
+    let bestCount = 1
+    for (const key of Object.keys(zeroOpcodes)) {
+      const count = chunkString(rawData, 2).filter(k => k === key).length
+      if (count > bestCount) {
+        const length = zeroOpcodes[key].slice(2)
+        zeroSubLength = new BN(length, 16).toString(16, 2)
+        sub = key
+        bestCount = count
+      }
+    }
+    if (sub) {
+      zeroOpcodes[sub] = '0000'
+    }
   }
 
   const compressedBits = []
@@ -162,9 +171,6 @@ function compress(calldata, options = {}) {
       compressedBits.push('1')
     } else if (maxOpcodes[byte]) {
       uniqueBytes.push(maxOpcodes[byte])
-      compressedBits.push('1')
-    } else if (zeroSubByte === byte) {
-      uniqueBytes.push('0000')
       compressedBits.push('1')
     } else {
       throw new Error(`Unrecognized byte string "${byte}"`)
@@ -268,7 +274,7 @@ function compress(calldata, options = {}) {
   if (finalData.length % 64 !== 0) {
     const fillDataLength = 64 - ((finalData.length) % 64)
     const fillData = Array(fillDataLength).fill('0').join('')
-    chunks.push(...chunkString(`${finalData.slice(0, -2)}${fillData}${zeroSubLength}`, 64))
+    chunks.push(...chunkString(`${finalData.slice(0, zeroSubLength ? -2 : undefined)}${fillData}${zeroSubLength}`, 64))
   } else {
     chunks.push(...chunkString(finalData, 64))
   }
@@ -320,34 +326,6 @@ function findAddresses(data) {
     dupes[a] = true
     return true
   })
-}
-
-function findBestZeroRepeat(data) {
-  let longest = 0
-  // let bestSavings = 0
-  let repeat = ''
-  for (let x = 6; x < 255; x+=2) {
-    const repeats = findRepeats(data, x)
-    if (Object.keys(repeats).length === 0) break
-    for (const k of Object.keys(repeats)) {
-      if (!/^0+$/.test(k)) {
-        continue
-      }
-      const cost = gasCost(k)
-      const savings = cost * repeats[k] - (repeats[k]*16 + 8 + 16)
-      // take the longest and rely on fixed zero subs for shorter values
-      if (k.length > longest) {
-        longest = k.length
-        repeat = k
-      }
-      // continue
-      // if (savings > bestSavings) {
-      //   bestSavings = savings
-      //   repeat = k
-      // }
-    }
-  }
-  return repeat
 }
 
 function findRepeats(_data, windowSize = 4) {
