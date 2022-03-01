@@ -9,9 +9,7 @@ const RegistryABI = require('./AddressRegistryABI.json')
  **/
 
 module.exports = {
-  compress: compressSingle,
-  compressSingle,
-  compressDouble,
+  compress,
   gasCost,
 }
 
@@ -23,7 +21,7 @@ module.exports = {
  * @param object functionForm - ABI format for encoding the data
  * @returns A bytes array that can be used as an argument for the decompressor
  **/
-function compressSingle(calldata, options = {}) {
+function compress(calldata, options = {}) {
   // defaults
   Object.assign(options, {
     addressSubs: {},
@@ -233,89 +231,6 @@ function compressSingle(calldata, options = {}) {
   return [
     `decompress(bytes32[${chunks.length}])`,
     chunks.map(d => `0x${d}`)
-  ]
-}
-
-function compressDouble(calldata) {
-  const bestSaving = findBestZeroRepeat(calldata)
-  // now do single bit compression
-  const _rawData = calldata.replace('0x', '')
-  let rawData = _rawData
-  let offset = 0
-  for (;;) {
-    if (bestSaving.length === 0) break
-    const index = rawData.indexOf(bestSaving, offset)
-    if (index === -1) break
-    if (index % 2 === 1) {
-      offset = index + 1
-      if (rawData.indexOf(bestSaving, offset) !== offset) continue
-      rawData = `${rawData.slice(0, index+1)}xx${rawData.slice(index + 1 + bestSaving.length)}`
-    } else rawData = rawData.replace(bestSaving, 'xx')
-  }
-  const secondBestSaving = findBestZeroRepeat(rawData)
-  offset = 0
-  for (;;) {
-    if (secondBestSaving.length === 0) break
-    const index = rawData.indexOf(secondBestSaving)
-    if (index === -1) break
-    if (index % 2 === 1) {
-      offset = index + 1
-      if (rawData.indexOf(secondBestSaving, offset) !== offset) continue
-      rawData = `${rawData.slice(0, index+1)}yy${rawData.slice(index + 1 + secondBestSaving.length)}`
-    } else rawData = rawData.replace(secondBestSaving, 'yy')
-  }
-  // console.log(rawData)
-  const compressedBits = []
-  const uniqueBytes = []
-  for (let x = 0; x < rawData.length / 2; x++) {
-    const byte = rawData.slice(x * 2, x * 2 + 2)
-    if (byte === 'xx') {
-      compressedBits.push('01')
-    } else if (byte === 'yy') {
-      compressedBits.push('11')
-    } else if (byte === '00') {
-      compressedBits.push('00')
-    } else {
-      compressedBits.push('10')
-      uniqueBytes.push(byte)
-    }
-  }
-  // now convert the binary to hex and abi encode the unique bytes
-  const reverse = (str) => str.split('').reverse().join('')
-  const bytes = []
-  const _compressedBits = compressedBits.join('')
-  for (let x = 0; x < _compressedBits.length / 8; x++) {
-    const byte = new BN(
-      reverse(_compressedBits.slice(x * 8, x * 8 + 8)),
-      2
-    ).toString(16, 2)
-    bytes.push(byte)
-  }
-  const _data = bytes.join('')
-  const uniqueData = uniqueBytes.join('')
-  // now store a length identifier in a uint24, supports a length of 16 MB
-  const bestSavingHex = new BN(bestSaving.length / 2).toString(16, 2)
-  const secondBestSavingHex = new BN(secondBestSaving.length / 2).toString(16, 2)
-  const lengthBytes = new BN(_data.length / 2).toString(16, 6)
-  const finalLength = new BN(calldata.replace('0x', '').length / 2).toString(16, 4)
-  const mainData = `${lengthBytes}${finalLength}${_data}${uniqueData}`
-  const suffixData = `${bestSavingHex}${secondBestSavingHex}`
-  const MAX_LENGTH = (32 * 32 * 2 - 1) // subtract one to account for type byte
-  if (mainData.length + suffixData.length > MAX_LENGTH) {
-    return [
-      `decompressDoubleBitCall(bytes)`,
-      `0x${mainData}${suffixData}`
-    ]
-  }
-  const fillDataLength = 64-((mainData.length + suffixData.length + 2) % 64)
-  // otherwise split to bytes32[]
-  const fillData = Array(fillDataLength).fill('0').join('')
-  // 01 is the type byte
-  const finalData = `01${mainData}${fillData}${suffixData}`
-  const chunks = chunkString(finalData, 64)
-  return [
-    `decompress(bytes32[${chunks.length}])`,
-    chunks.map(c => `0x${c}`)
   ]
 }
 

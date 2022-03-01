@@ -23,18 +23,6 @@ contract Decompressor {
   }
 
   /**
-   * Decompress double bit encoding and delegatecall self so msg.sender is
-   * preserved
-   **/
-  function decompressDoubleBitCall(
-    bytes memory data
-  ) public {
-    bytes memory finalData = Decompress(dec).doubleBitZero(data);
-    (bool status,) = address(this).delegatecall(finalData);
-    require(status);
-  }
-
-  /**
    * Auto generated specific length calldata functions
    * Avoids the 32 byte prefix of a `bytes` argument
    *

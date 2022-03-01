@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat')
 const assert = require('assert')
-const { compressSingle, compressDouble } = require('../src')
+const { compress } = require('../src')
 
 async function getDeployedContracts() {
   const Decompress = await ethers.getContractFactory('Decompress')
@@ -23,7 +23,7 @@ describe('decompressor', () => {
     const hash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['address'], [user.address]))
     await test.testMethod3(user.address, hash).then(t => t.wait())
     {
-      const [func, data] = compressSingle(
+      const [func, data] = compress(
         test.interface.encodeFunctionData('testMethod3', [user.address, hash]),
         {
           addressSubs: {
@@ -41,7 +41,7 @@ describe('decompressor', () => {
     const bytes = '0xffffffffff00000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20'
     const hash = ethers.utils.keccak256(bytes)
     {
-      const [func, data] = compressSingle(
+      const [func, data] = compress(
         test.interface.encodeFunctionData('testMethod2', [bytes, hash])
       )
       const tx = await test[func](data)
@@ -59,14 +59,7 @@ describe('decompressor', () => {
     const v2 = 150
     const eq = true
     {
-      // const [func, data] = compressDouble(
-      //   test.interface.encodeFunctionData('testMethod1', [v1, v2, eq])
-      // )
-      // const tx = await test[func](data)
-      // await tx.wait()
-    }
-    {
-      const [func, data] = compressSingle(
+      const [func, data] = compress(
         test.interface.encodeFunctionData('testMethod1', [v1, v2, eq])
       )
       const tx = await test[func](data)
@@ -79,14 +72,7 @@ describe('decompressor', () => {
     const bytes = '0x000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20'
     const hash = ethers.utils.keccak256(bytes)
     {
-      // const [func, data] = compressDouble(
-      //   test.interface.encodeFunctionData('testMethod2', [bytes, hash])
-      // )
-      // const tx = await test[func](data)
-      // await tx.wait()
-    }
-    {
-      const [func, data] = compressSingle(
+      const [func, data] = compress(
         test.interface.encodeFunctionData('testMethod2', [bytes, hash])
       )
       const tx = await test[func](data)
@@ -105,9 +91,9 @@ describe('decompressor', () => {
     const eq = true
     {
       const calldata1 = test.interface.encodeFunctionData('testMethod1', [ v1, v2, eq ])
-      const [func1, data1] = compressSingle(calldata1)
+      const [func1, data1] = compress(calldata1)
       const calldata2 = test.interface.encodeFunctionData(func1, [data1])
-      const [func2, data2] = compressSingle(calldata2)
+      const [func2, data2] = compress(calldata2)
       const tx = await test[func2](data2)
       await tx.wait()
     }
@@ -119,9 +105,9 @@ describe('decompressor', () => {
     const hash = ethers.utils.keccak256(bytes)
     {
       const calldata1 = test.interface.encodeFunctionData('testMethod2', [ bytes, hash ])
-      const [func1, data1] = compressSingle(calldata1)
+      const [func1, data1] = compress(calldata1)
       const calldata2 = test.interface.encodeFunctionData(func1, [data1])
-      const [func2, data2] = compressSingle(calldata2)
+      const [func2, data2] = compress(calldata2)
       const tx = await test[func2](data2)
       await tx.wait()
     }
@@ -144,14 +130,9 @@ describe('decompressor', () => {
     const calldata = test.interface.encodeFunctionData('testMethod2', [ hexData, hash ])
     {
       // single compress
-      const [func, data] = compressSingle(calldata)
+      const [func, data] = compress(calldata)
       const tx = await test[func](data)
       await tx.wait()
-    }
-    {
-      // const [func, data] = compressDouble(calldata)
-      // const tx = await test[func](data)
-      // await tx.wait()
     }
     await test.testMethod2(hexData, hash).then(t => t.wait())
   })
