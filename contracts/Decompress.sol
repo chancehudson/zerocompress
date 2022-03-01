@@ -40,7 +40,9 @@ contract Decompress is AddressRegistry {
     uint24 finalLength;
     uint48 uniqueStart;
     uint8 offset;
+    bool onesAreZeroes = false;
     {
+      onesAreZeroes = uint8(data[0] & bytes1(uint8(1))) == 1;
       // 01100000 - 6
       // bit shift once
       uint8 dataBytesLength = uint8(data[0] & bytes1(uint8(6))) / 2;
@@ -74,40 +76,43 @@ contract Decompress is AddressRegistry {
     bool lastBit = true;
     /* uint24 finalDataOffset = 0; */
     uint48 zeroOffset = 0;
-    for (uint48 x = offset; x < dataLength + offset; x++) {
+    for (uint48 x = offset*8; x < (dataLength + offset)*8; x++) {
       // all zeroes in this byte, skip it
-      if (uint8(data[x]) == 0) {
+      if (
+        x%8==0 && (
+          (uint8(data[x/8]) == 0 && !onesAreZeroes) || (uint8(data[x/8]) == 255 && onesAreZeroes)
+        )
+      ) {
         zeroOffset += 8;
         lastBit = false;
+        x+=7;
         continue;
       }
-      for (uint8 y; y < 8; y++) {
-        /* uint48 index = 8*(x-offset)+y+finalDataOffset; */
-        if (zeroOffset >= finalLength) return finalData;
-        // take the current bit and convert it to a uint8
-        // use exponentiation to bit shift
-        uint8 thisVal = uint8(data[x] & bytes1(uint8(2**y))) / uint8(2**y);
-        // if non-zero add the unique value
-        if (thisVal == 0) {
-          lastBit = false;
-          zeroOffset++;
-          continue;
-        }
-        assert(thisVal == 1);
-        lastBit = true;
-        if (uint8(data[uniqueStart + latestUnique]) == 0) {
-          // it's an opcode
-          (uint48 uniqueIncr, uint24 dataIncr) = handleOpcode(
-            data,
-            uniqueStart + latestUnique,
-            finalData,
-            zeroOffset
-          );
-          latestUnique += uniqueIncr;
-          zeroOffset += dataIncr;
-        } else {
-          finalData[zeroOffset++] = data[uniqueStart + latestUnique++];
-        }
+      /* uint48 index = 8*(x-offset)+y+finalDataOffset; */
+      if (zeroOffset >= finalLength) return finalData;
+      // take the current bit and convert it to a uint8
+      // use exponentiation to bit shift
+      uint8 thisVal = uint8(data[x/8] & bytes1(uint8(2**(x%8)))) / uint8(2**(x%8));
+      // if non-zero add the unique value
+      if ((thisVal == 0 && !onesAreZeroes) || (thisVal == 1 && onesAreZeroes)) {
+        lastBit = false;
+        zeroOffset++;
+        continue;
+      }
+      assert(thisVal == (onesAreZeroes ? 0 : 1));
+      lastBit = true;
+      if (uint8(data[uniqueStart + latestUnique]) == 0) {
+        // it's an opcode
+        (uint48 uniqueIncr, uint24 dataIncr) = handleOpcode(
+          data,
+          uniqueStart + latestUnique,
+          finalData,
+          zeroOffset
+        );
+        latestUnique += uniqueIncr;
+        zeroOffset += dataIncr;
+      } else {
+        finalData[zeroOffset++] = data[uniqueStart + latestUnique++];
       }
     }
     while (zeroOffset < finalLength) {

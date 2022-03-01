@@ -201,9 +201,24 @@ function compress(calldata, options = {}) {
   if (_compressedBits.length === 0 && lastBit === '0') {
     _compressedBits = Array(8).fill('0').join('')
   }
+  if (_compressedBits.length % 8 !== 0) {
+    const fillCount = 8 - _compressedBits.length % 8
+    _compressedBits = _compressedBits + Array(fillCount).fill('0').join('')
+  }
+  // flip the ones and zeroes if it's profitable
+  let onesAreZeroes = false
+  const zeroChunks = chunkString(_compressedBits, 8).filter((c) => +c === 0).length
+  const ffChunks = chunkString(_compressedBits, 8).filter((c) => c === '11111111').length
+  if (ffChunks > zeroChunks) {
+    onesAreZeroes = true
+  }
+  const finalBits = _compressedBits.split('').map(b => {
+    if (!onesAreZeroes) return b
+    return b === '0' ? '1' : '0'
+  }).join('')
   for (let x = 0; x < _compressedBits.length / 8; x++) {
     const byte = new BN(
-      reverse(_compressedBits.slice(x * 8, x * 8 + 8)),
+      reverse(finalBits.slice(x * 8, x * 8 + 8)),
       2
     ).toString(16, 2)
     bytes.push(byte)
@@ -238,7 +253,7 @@ function compress(calldata, options = {}) {
     finalLength = new BN(calldataByteLength).toString(16, 6)
   }
   const configByte = new BN(
-    reverse(`0${dataBytesLength}${finalBytesLength}${dataLengthBits}`),
+    reverse(`${onesAreZeroes ? 1 : 0}${dataBytesLength}${finalBytesLength}${dataLengthBits}`),
     2
   ).toString(16, 2)
   const finalData = `${configByte}${dataLength}${finalLength}${_data}${uniqueData}${zeroSubLength}`
