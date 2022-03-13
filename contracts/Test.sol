@@ -26,4 +26,16 @@ contract Test is Decompressor {
     require(keccak256(abi.encode(a)) == h, 'ne');
     wasEqual = false;
   }
+
+  function testMethod4(uint[4] calldata p, bytes32 h) public {
+    require(
+      p[0] != 0 &&
+      p[1] != 0 &&
+      p[2] != 0 &&
+      p[3] != 0,
+      'zer'
+    );
+    require(keccak256(abi.encodePacked(p)) == h, 'ne');
+    wasEqual = false;
+  }
 }

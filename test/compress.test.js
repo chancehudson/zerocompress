@@ -1,6 +1,8 @@
 const { ethers } = require('hardhat')
 const assert = require('assert')
 const { compress } = require('../src')
+const crypto = require('crypto')
+const { signer, mcl } = require('@thehubbleproject/bls')
 
 async function getDeployedContracts() {
   const Decompress = await ethers.getContractFactory('DecompressTest')
@@ -14,7 +16,67 @@ async function getDeployedContracts() {
   return { decompress, test }
 }
 
+async function getBlsSigner() {
+  const factory = await signer.BlsSignerFactory.new()
+  const domain = await new Promise((rs, rj) =>
+    crypto.randomBytes(32, (err, bytes) => (err ? rj(err) : rs(bytes)))
+  )
+  const domainHex = Buffer.from(domain, 'hex')
+  // secret data
+  const rand = await new Promise((rs, rj) =>
+    crypto.randomBytes(50, (err, bytes) => (err ? rj(err) : rs(bytes)))
+  )
+  return factory.getSigner(domainHex, `0x${rand.toString('hex')}`)
+}
+
 describe('decompressor', () => {
+  it('should compress bls pubkey', async () => {
+    const [ user ] = await ethers.getSigners()
+    const { test, decompress } = await getDeployedContracts()
+    const _signer = await getBlsSigner()
+    await decompress.connect(user).bindPubkey(_signer.pubkey).then(t => t.wait())
+    const id = await decompress.idByPubkey(_signer.pubkey)
+    const hash = ethers.utils.keccak256(ethers.utils.solidityPack(['uint[4]'], [_signer.pubkey]))
+    await test.testMethod4(_signer.pubkey, hash).then(t => t.wait())
+    {
+      const [func, data] = compress(
+        test.interface.encodeFunctionData('testMethod4', [_signer.pubkey, hash]),
+        {
+          blsPubkeySubs: [
+            [_signer.pubkey, id],
+          ]
+        }
+      )
+      const tx = await test[func](data)
+      await tx.wait()
+    }
+  })
+
+  it('should fail to decompress bad pubkey id', async () => {
+    const [ user ] = await ethers.getSigners()
+    const { test, decompress } = await getDeployedContracts()
+    const _signer = await getBlsSigner()
+    const id = 1000000
+    const hash = ethers.utils.keccak256(ethers.utils.solidityPack(['uint[4]'], [_signer.pubkey]))
+    await test.testMethod4(_signer.pubkey, hash).then(t => t.wait())
+    try {
+      const [func, data] = compress(
+        test.interface.encodeFunctionData('testMethod4', [_signer.pubkey, hash]),
+        {
+          blsPubkeySubs: [
+            [_signer.pubkey, id],
+          ]
+        }
+      )
+      const tx = await test[func](data)
+      await tx.wait()
+    } catch (err) {
+      const { chainId } = await ethers.provider.getNetwork()
+      if (chainId === 31337)
+        assert(err.toString().indexOf(`reverted with reason string 'pubkey not set'`) !== -1)
+    }
+  })
+
   it('should compress address', async () => {
     const [ user ] = await ethers.getSigners()
     const { test, decompress } = await getDeployedContracts()
@@ -33,6 +95,31 @@ describe('decompressor', () => {
       )
       const tx = await test[func](data)
       await tx.wait()
+    }
+  })
+
+  it('should fail to decompress bad address id', async () => {
+    const [ user ] = await ethers.getSigners()
+    const { test, decompress } = await getDeployedContracts()
+    const id = 1000000
+    const hash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['address'], [user.address]))
+    await test.testMethod3(user.address, hash).then(t => t.wait())
+    try {
+      const [func, data] = compress(
+        test.interface.encodeFunctionData('testMethod3', [user.address, hash]),
+        {
+          addressSubs: {
+            [user.address]: id
+          }
+        }
+      )
+      const tx = await test[func](data)
+      await tx.wait()
+      assert(false)
+    } catch (err) {
+      const { chainId } = await ethers.provider.getNetwork()
+      if (chainId === 31337)
+        assert(err.toString().indexOf(`reverted with reason string 'address not set'`) !== -1)
     }
   })
 

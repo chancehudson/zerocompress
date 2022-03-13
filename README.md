@@ -23,7 +23,7 @@ A zero value in the `uniques` array indicates a special operation. The byte foll
 - [x] `0x01-0xE0` - Fixed length 0 insertion
 - [x] `0xE1-0xF1` - Fixed length `0xFF` insertion
 - [x] `0xF2-0xF6 (uint40 id)` - address insertion
-- [ ] `0xF7-0xFA(uint40 id)` - bls pubkey insertion (uint[4])
+- [x] `0xF7-0xFA(uint40 id)` - bls pubkey insertion (uint[4])
 - [ ] `tbd(uint8 length)` - insert a repeat string of bytes specified at register 2
 - [x] `0xFC-0xFF` - for external use
 

@@ -25,6 +25,7 @@ function compress(calldata, options = {}) {
   // defaults
   Object.assign(options, {
     addressSubs: {},
+    blsPubkeySubs: [],
     ...options,
   })
   options.addressSubs = Object.keys(options.addressSubs).reduce((acc, key) => {
@@ -33,6 +34,12 @@ function compress(calldata, options = {}) {
       ...acc,
     }
   }, {})
+  options.blsPubkeySubs = options.blsPubkeySubs.map(([pubkey, id])=> {
+    return [
+      pubkey.map(k => k.replace('0x', '').toLowerCase()),
+      id,
+    ]
+  })
   // now do single bit compression
   let rawData = calldata.replace('0x', '').toLowerCase()
   let subByte
@@ -51,6 +58,42 @@ function compress(calldata, options = {}) {
     const opcode = `00${lengthHex}`
     maxOpcodes[subByte] = opcode
     rawData = `${rawData.slice(0, index)}${subByte}${rawData.slice(index+match.length)}`
+  }
+
+  const blsOpcodes = {}
+  for (const [pubkey, id] of options.blsPubkeySubs) {
+    subByte = nextSubstitutionByte(subByte)
+    let opcode
+    if (id < 2**8) {
+      // 1 byte
+      const op = new BN(247).toString(16, 2)
+      const subhex = new BN(id).toString(16, 2)
+      opcode = `00${op}${subhex}`
+    } else if (id < 2**16) {
+      // 2 bytes
+      const op = new BN(248).toString(16, 2)
+      const subhex = new BN(id).toString(16, 4)
+      opcode = `00${op}${subhex}`
+    } else if (id < 2**24) {
+      // 3 bytes
+      const op = new BN(249).toString(16, 2)
+      const subhex = new BN(id).toString(16, 6)
+      opcode = `00${op}${subhex}`
+    } else if (id < 2**32) {
+      // 4 bytes
+      const op = new BN(250).toString(16, 2)
+      const subhex = new BN(id).toString(16, 8)
+      opcode = `00${op}${subhex}`
+    } else if (id < 2**40) {
+      // 5 bytes
+      const op = new BN(251).toString(16, 2)
+      const subhex = new BN(id).toString(16, 10)
+      opcode = `00${op}${subhex}`
+    } else {
+      throw new Error('bls pubkey sub number is out of range')
+    }
+    blsOpcodes[subByte] = opcode
+    rawData = replaceEvenIndexes(rawData, pubkey.join(''), subByte)
   }
 
   // look for addresses, then replace them with a marker
@@ -94,7 +137,6 @@ function compress(calldata, options = {}) {
     // opcode 02 indicating address replacement
     // 3 bytes indicating the address id
     addressOpcodes[subByte] = opcode
-    // TODO: make sure this is at an even index
     const fullAddress = `000000000000000000000000${a.replace('0x', '')}`
     rawData = replaceEvenIndexes(rawData, fullAddress, subByte)
   }
@@ -158,6 +200,9 @@ function compress(calldata, options = {}) {
       compressedBits.push('1')
     } else if (maxOpcodes[byte]) {
       uniqueBytes.push(maxOpcodes[byte])
+      compressedBits.push('1')
+    } else if (blsOpcodes[byte]) {
+      uniqueBytes.push(blsOpcodes[byte])
       compressedBits.push('1')
     } else {
       throw new Error(`Unrecognized byte string "${byte}"`)

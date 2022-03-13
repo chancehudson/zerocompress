@@ -189,6 +189,36 @@ contract Decompress is AddressRegistry, BLSKeyRegistry {
         finalOffset
       );
       return (2+byteCount, 32);
+    } else if (opcode >= 247 && opcode <= 251) {
+      // bls pubkey insertion
+      uint idStart = uniqueOffset + 2;
+      uint8 byteCount = (opcode - 247) + 1;
+      // address replacement (N bytes)
+      uint40 id;
+      for (uint8 x; x < byteCount; x++) {
+        id += uint40(uint8(uniqueData[idStart+x]) * 2 ** (8*(byteCount-x-1)));
+      }
+      uint[4] memory pubkey = pubkeyById[id];
+      require(
+        pubkey[0] != 0 &&
+        pubkey[1] != 0 &&
+        pubkey[2] != 0 &&
+        pubkey[3] != 0
+      , 'pubkey not set');
+      bytes memory b = new bytes(128);
+      assembly {
+        mstore(add(b, 32), mload(pubkey))
+        mstore(add(b, 64), mload(add(pubkey, 32)))
+        mstore(add(b, 96), mload(add(pubkey, 64)))
+        mstore(add(b, 128), mload(add(pubkey, 96)))
+      }
+      copyData(
+        b,
+        finalData,
+        finalOffset
+      );
+      return (2+byteCount, 128);
+
     /* } else if (opcode > 170) { */
       /* (bool success, bytes memory data) = msg.sender.call(
         abi.encodeWithSignature(
