@@ -23,7 +23,7 @@ A zero value in the `uniques` array indicates a special operation. The byte foll
 - [x] `0x01-0xE0` - Fixed length 0 insertion
 - [x] `0xE1-0xF1` - Fixed length `0xFF` insertion
 - [x] `0xF2-0xF6 (uint40 id)` - address insertion
-- [x] `0xF7-0xFA(uint40 id)` - bls pubkey insertion (uint[4])
+- [x] `0xF7-0xFB (uint40 id)` - bls pubkey insertion (uint[4])
 - [ ] `tbd(uint8 length)` - insert a repeat string of bytes specified at register 2
 - [x] `0xFC-0xFF` - for external use
 
@@ -54,8 +54,9 @@ Encode the data for the target function call using Ethers or Web3. Then compress
 ```js
 const { ethers } = require('ethers')
 const { ExampleABI } = require('Example.sol.json')
-const { compressSingle, compressDouble } = require('zerocompress')
+const { compress } = require('zerocompress')
 
+// deploy your contract that inherits Decompressor
 const example = new ethers.Contract(
   '0xabcabcabc0abcabcabc0abcabcabc0abcabcabc0',
   ExampleABI
@@ -64,9 +65,44 @@ const example = new ethers.Contract(
 // Encode the function call
 const calldata = example.interface.encodeFunctionData('testFunc', [ 20, 40 ])
 // Compress the data and get a function to call and data to pass
-const [ func, data ] = compressSingle(calldata)
+const [ func, data ] = compress(calldata)
 // Call the function with the data
 const tx = await example[func](data)
 // Wait for the transaction to complete
 await tx.wait()
 ```
+
+### `compress` API
+
+`compress(calldata, options) returns [func, data]`
+
+- `calldata`: A bytes string optionally prefixed with `0x`. Should be an 8 byte function selector followed by abi encoded arguments.
+- `options`: An optional object specifying address and bls public key replacements.
+  - `addressSubs`: An optional object mapping addresses to integers. Example: `{ '0xabcabcabc0abcabcabc0abcabcabc0abcabcabc0': 10029 }`
+  - `blsPubkeySubs`: An array of arrays mapping bls public keys to integers. Each item should be an array of length 2 containing the bls key (as an array of hex strings) as the first element, and an integer as the second element. Example:
+
+```
+blsPubKeySubs: 
+[
+  [ // the first replacement element
+    [
+      '0x02387ea12d645f4a3af6f974de1732c5d2a4469ddd14b74068f3f9ab71a3adf2',
+      '0x2fb47daa10b6066a152832ce5275297424ef3b778f9853510cea6a79ab07bf42',
+      '0x26d1389521121b21d7f6ee981f35ff627944b3a6877ecdc194b7b9ed6c1ec112',
+      '0x0f4c29d245098298838b2e66de53d1d10482bddada6b4fc0d4b5b814fa2d5b16'
+    ],
+    41294
+  ],
+  [ // the second replacement element
+    [
+      '0x02186699ca6e1174566611699dd295af60434d60b0478a621e933789cf6c9574',
+      '0x2f43e276298f9ecfc4c3925155fe852b94cfd191410831b051663fabf99ec2ce',
+      '0x11bf07ff3b44f6f4ec24effc81be892097e591af6591481c6d84a99d0ece2f17',
+      '0x28a14cf5fb0e62f55cba5048c3c6cfe53ad8eda449e7528abf30484eb7efdc64'
+    ],
+    20939
+  ]
+]
+```
+  - `func`: (return value) A fully formed function selector to call on the target contract. Example: `decompress(bytes32[2])`
+  - `data`: (return value) Data to pass to the returned function.
