@@ -8,8 +8,6 @@ contract Test is Decompressor {
   uint constant sum = 300;
   bool wasEqual = false;
 
-  constructor(address d) Decompressor(d) {}
-
   function testMethod1(uint v1, uint v2, bool eq) public {
     require((v1 == v2) == eq, 't1');
     require(v1+v2 == sum, 't2');

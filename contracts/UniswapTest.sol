@@ -35,8 +35,6 @@ contract UniswapTest is Decompressor {
   address public constant weth = 0xbC6F6b680bc61e30dB47721c6D1c5cde19C1300d;
   uint x;
 
-  constructor(address d) Decompressor(d) {}
-
   function uniswapV3MintCallback(uint, uint, bytes memory) public pure {}
   function uniswapV3SwapCallback(int256, int256, bytes memory) public pure {}
 

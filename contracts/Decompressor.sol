@@ -5,10 +5,26 @@ pragma experimental ABIEncoderV2;
 import "./Decompress.sol";
 
 contract Decompressor {
-  address dec = address(0);
+  address constant deployer = address(0);
+  address immutable dec;
 
-  constructor(address d) {
-    dec = d;
+  constructor() {
+    if (deployer == address(0)) {
+      require(getChainId() == 31337, 'deployer address not set');
+    }
+    dec = address(uint160(uint(keccak256(abi.encodePacked(
+      byte(0xd6),
+      byte(0x94),
+      getChainId() == 31337 ? msg.sender : deployer,
+      byte(0x80))))));
+  }
+
+  function getChainId() internal view returns (uint) {
+    uint id;
+    assembly {
+      id := chainid()
+    }
+    return id;
   }
 
   /**

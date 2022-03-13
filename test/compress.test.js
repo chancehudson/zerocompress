@@ -4,13 +4,18 @@ const { compress } = require('../src')
 const crypto = require('crypto')
 const { signer, mcl } = require('@thehubbleproject/bls')
 
+const _decompress = ethers.getContractFactory('DecompressTest')
+  .then(f => f.deploy())
+  .then(async c => {
+    await c.deployed()
+    return c
+  })
+
 async function getDeployedContracts() {
-  const Decompress = await ethers.getContractFactory('DecompressTest')
-  const decompress = await Decompress.deploy()
-  await decompress.deployed()
+  const decompress = await _decompress
 
   const Test = await ethers.getContractFactory('Test')
-  const test = await Test.deploy(decompress.address)
+  const test = await Test.deploy()
   await test.deployed()
 
   return { decompress, test }
