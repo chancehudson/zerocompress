@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "build": "hardhat compile && node scripts/abi.js",
+    "deploy": "hardhat run scripts/deployDecompress.js",
     "test": "hardhat test"
   },
   "keywords": [

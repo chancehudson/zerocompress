@@ -82,7 +82,6 @@ await tx.wait()
   - `blsPubkeySubs`: An array of arrays mapping bls public keys to integers. Each item should be an array of length 2 containing the bls key (as an array of hex strings) as the first element, and an integer as the second element. Example:
 
 ```
-blsPubKeySubs: 
 [
   [ // the first replacement element
     [
@@ -106,3 +105,40 @@ blsPubKeySubs:
 ```
   - `func`: (return value) A fully formed function selector to call on the target contract. Example: `decompress(bytes32[2])`
   - `data`: (return value) Data to pass to the returned function.
+
+### Address Registry
+
+To use address substitution each address must be registered with the `Decompress` contract. Registration will return an integer that can be substituted in compressed data.
+
+```
+const { decompressAddress, AddressRegistryABI } = require('zerocompress')
+{
+  const registry = new ethers.Contract(decompressAddress, AddressRegistryABI)
+  await registry.bindAddress(myAddress).then(t => t.wait())
+  const id = await registry.idByAddress(myAddress)
+  // id is the address that can be used for compression now
+  // e.g. compress(calldata, { addressSubs: { [myAddress]: id }})
+}
+```
+
+### BLS Public Key Registry
+
+To use BLS public key substitution each public key must be registered with the `Decompress` contract before use. Registration will return an integer that can be substituted in compressed data.
+
+```
+const { decompressAddress, BLSPubkeyRegistryABI } = require('zerocompress')
+{
+  const registry = new ethers.Contract(decompressAddress, BLSPubkeyRegistryABI)
+  await registry.bindPubkey(myPubkey).then(t => t.wait())
+  const id = await registry.idByPubkey(myPubkey)
+  // id is the pubkey that can be used for compression now
+  // e.g. compress(calldata, { blsPubkeySubs: [ [ myPubkey, id ] ]})
+}
+```
+
+### Addresses
+
+The `Decompress` contract (implementing the `AddressRegistry` and `BLSPubkeyRegistry`) is available on the following networks:
+
+- Optimism Kovan: [0x75b6fA14947E6B524ECEf46a6A4A3c1D0E0b62dF](https://kovan-optimistic.etherscan.io/address/0x75b6fA14947E6B524ECEf46a6A4A3c1D0E0b62dF)
+- Arbitrum Rinkeby: [0x75b6fA14947E6B524ECEf46a6A4A3c1D0E0b62dF](https://testnet.arbiscan.io/address/0x75b6fA14947E6B524ECEf46a6A4A3c1D0E0b62dF)
