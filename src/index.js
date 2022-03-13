@@ -1,25 +1,18 @@
 const BN = require('bn.js')
 const { ethers } = require('ethers')
-const RegistryABI = require('./AddressRegistryABI.json')
-
-/**
- * Leading bit indicating whether a 0 indicates a 0 or 1
- * Cut trailing bits if they're all the same
- * Fixed length 0xff byte insertion
- **/
+const AddressRegistryABI = require('./AddressRegistryABI.json')
+const BLSKeyRegistryABI = require('./BLSKeyRegistryABI.json')
 
 module.exports = {
   compress,
   gasCost,
+  AddressRegistryABI,
+  BLSKeyRegistryABI,
+  decompressAddress: '0x75b6fA14947E6B524ECEf46a6A4A3c1D0E0b62dF',
 }
 
 /**
- * Encode calldata along with metadata indicating which contract to invoke
- * @param number receiver - Index of the contract that should receive the call
- * @param number method - The method to invoke in the receiving contract
- * @param object data - The arguments to be passed to the receiving contract
- * @param object functionForm - ABI format for encoding the data
- * @returns A bytes array that can be used as an argument for the decompressor
+ * Compress calldata and return a function to call along with data to pass
  **/
 function compress(calldata, options = {}) {
   // defaults
