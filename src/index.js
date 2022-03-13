@@ -56,22 +56,8 @@ function compress(calldata, options = {}) {
   // look for addresses, then replace them with a marker
   // then during iteration below insert the opcode logic
   // returns de-duplicated addresses
-  const addresses = findAddresses(rawData)
-    .filter(a => {
-      if (options.addressSubs['*']) {
-        // check to make sure it's address-ey
-        if (a.split('').filter(c => c === '0').length > 5) {
-          return false
-        } else {
-          return true
-        }
-      } else {
-        return options.addressSubs[a]
-      }
-    })
-
   const addressOpcodes = {}
-  for (const a of addresses) {
+  for (const a of Object.keys(options.addressSubs)) {
     const id = options.addressSubs[a] || options.addressSubs['*']
     subByte = nextSubstitutionByte(subByte)
     // re-pad it and insert a marker
@@ -108,8 +94,9 @@ function compress(calldata, options = {}) {
     // opcode 02 indicating address replacement
     // 3 bytes indicating the address id
     addressOpcodes[subByte] = opcode
+    // TODO: make sure this is at an even index
     const fullAddress = `000000000000000000000000${a.replace('0x', '')}`
-    rawData = rawData.replace(new RegExp(fullAddress, 'g'), subByte)
+    rawData = replaceEvenIndexes(rawData, fullAddress, subByte)
   }
 
   // now do 0 subs if needed
@@ -311,21 +298,23 @@ function nextSubstitutionByte(current) {
   }
 }
 
-// accepts a structure function call for `data` (4 byte sig, 32 byte args)
-function findAddresses(data) {
-  const args = data.replace('0x', '').slice(8)
-  // now check every 32 byte value to see if it's an address (12 leading 0 bytes)
-  const addressRegex = /(0{24}[a-fA-F0-9]{40})(?=(?:[\da-zA-Z]{2})*$)/
-  const _addresses = data.match(addressRegex)
-  if (_addresses === null) return []
-  const addresses = _addresses.map(a => `0x${a.slice(24)}`)
-  const dupes = {}
-  // dedupe
-  return addresses.filter(a => {
-    if (dupes[a]) return false
-    dupes[a] = true
-    return true
-  })
+// replace a substring that exists only at even indexes
+// do it as many times as possible
+function replaceEvenIndexes(_str, substr, replacement) {
+  let str = _str
+  let minIndex = 0
+  for (;;) {
+    const index = str.indexOf(substr, minIndex)
+    if (index === -1) return str
+    if (index % 2 === 1) {
+      minIndex = index
+      continue
+    }
+    // otherwise do the replacement
+    str = `${str.slice(0, index)}${replacement}${str.slice(index + substr.length)}`
+    minIndex += replacement.length
+  }
+  return str
 }
 
 function findRepeats(_data, windowSize = 4) {
