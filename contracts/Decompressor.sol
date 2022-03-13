@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./Decompress.sol";
 
 contract Decompressor {
-  address constant deployer = address(0);
+  address constant deployer = 0xB38c8CDdde175554960fba4abc0949e7dC5e8aE0;
   address immutable dec;
 
   constructor() {
