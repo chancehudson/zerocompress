@@ -3,6 +3,7 @@ pragma solidity >=0.7.0;
 pragma experimental ABIEncoderV2;
 
 import { AddressRegistry } from "./AddressRegistry.sol";
+import { BLSKeyRegistry } from "./BLSKeyRegistry.sol";
 
 interface OpcodeHandler {
   function handleOpcode(
@@ -13,7 +14,7 @@ interface OpcodeHandler {
   ) external;
 }
 
-contract Decompress is AddressRegistry {
+contract Decompress is AddressRegistry, BLSKeyRegistry {
   /**
    * A 0 bit indicates a 0 byte
    * A 1 bit indicates a unique byte

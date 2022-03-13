@@ -4,7 +4,7 @@ pragma solidity >=0.7.0;
 contract AddressRegistry {
   mapping (uint40 => address) public addressById;
   mapping (address => uint40) public idByAddress;
-  uint40 public latestId = 0;
+  uint40 public latestAddressId = 0;
 
   function bindAddress(address a) public returns (uint40 id) {
     // find the number of zeroes in the address
@@ -18,8 +18,8 @@ contract AddressRegistry {
     require(zeroCount < 16, 'nosav');
     // otherwise we'll store it
     require(idByAddress[a] == 0, 'dupe');
-    require(latestId < type(uint40).max, 'full');
-    id = ++latestId;
+    require(latestAddressId < type(uint40).max, 'full');
+    id = ++latestAddressId;
     addressById[id] = a;
     idByAddress[a] = id;
   }
