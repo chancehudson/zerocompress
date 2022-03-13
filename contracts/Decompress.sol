@@ -17,21 +17,11 @@ interface OpcodeHandler {
 contract Decompress is AddressRegistry, BLSKeyRegistry {
   /**
    * A 0 bit indicates a 0 byte
-   * A 1 bit indicates a unique byte
+   * A 1 bit indicates a unique byte or opcode
    **/
   function singleBit(
     bytes memory data
   ) public view returns (bytes memory) {
-    /* uint8[8] memory masks;
-    masks[0] = 1;
-    masks[1] = 2;
-    masks[2] = 4;
-    masks[3] = 8;
-    masks[4] = 16;
-    masks[5] = 32;
-    masks[6] = 64;
-    masks[7] = 128; */
-
     // first byte sets arguments
     // first bit: indicates whether 0 or 1 indicates a zero byte (default 0)
     // bits 2-3: indicates length of data array
@@ -73,23 +63,20 @@ contract Decompress is AddressRegistry, BLSKeyRegistry {
     uint48 latestUnique = 0;
     // 1 bits per item
     // do an AND then shift
-    // start at a 5 byte offset
-    bool lastBit = true;
-    /* uint24 finalDataOffset = 0; */
+    bool lastBit = true; // used if not all bits are supplied, see below
     uint48 zeroOffset = 0;
     for (uint48 x = offset*8; x < (dataLength + offset)*8; x++) {
-      // all zeroes in this byte, skip it
       if (
         x%8==0 && (
           (uint8(data[x/8]) == 0 && !onesAreZeroes) || (uint8(data[x/8]) == 255 && onesAreZeroes)
         )
       ) {
+        // all zeroes in this byte, skip it
         zeroOffset += 8;
         lastBit = false;
         x+=7;
         continue;
       }
-      /* uint48 index = 8*(x-offset)+y+finalDataOffset; */
       if (zeroOffset >= finalLength) return finalData;
       // take the current bit and convert it to a uint8
       // use exponentiation to bit shift
@@ -218,20 +205,6 @@ contract Decompress is AddressRegistry, BLSKeyRegistry {
         finalOffset
       );
       return (2+byteCount, 128);
-
-    /* } else if (opcode > 170) { */
-      /* (bool success, bytes memory data) = msg.sender.call(
-        abi.encodeWithSignature(
-          "handleOpcode(bytes,uint,bytes,uint)",
-          uniqueData,
-          uniqueOffset,
-          finalData,
-          finalOffset
-        )
-      );
-      require(success);
-      (uint48 u, uint24 d) = abi.decode(data, (uint48, uint24)); */
-      /* return (u, d); */
     } else {
       revert('unknown opcode');
     }
