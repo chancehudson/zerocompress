@@ -183,7 +183,7 @@ contract Decompress is AddressRegistry {
       address a = addressById[id];
       require(a != address(0), 'address not set');
       copyData(
-        bytes32ToBytes(bytes32(uint(a))),
+        bytes32ToBytes(bytes32(uint(uint160(a)))),
         finalData,
         finalOffset
       );
