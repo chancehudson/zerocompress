@@ -129,9 +129,16 @@ function compress(calldata, options = {}) {
     // leading 00 to indicate an opcode
     // opcode 02 indicating address replacement
     // 3 bytes indicating the address id
-    addressOpcodes[subByte] = opcode
-    const fullAddress = `000000000000000000000000${a.replace('0x', '')}`
-    rawData = replaceEvenIndexes(rawData, fullAddress, subByte)
+    if (a === '*') {
+      addressOpcodes[subByte] = opcode
+      const before = rawData.length
+      // TODO: better check for address formed (e.g. < 5 zeroes)
+      rawData = rawData.replace(/0{24}[a-fA-F0-9]{40}(?=(?:[\da-zA-Z]{2})*$)/, subByte)
+    } else {
+      addressOpcodes[subByte] = opcode
+      const fullAddress = `000000000000000000000000${a.replace('0x', '')}`
+      rawData = replaceEvenIndexes(rawData, fullAddress, subByte)
+    }
   }
 
   // now do 0 subs if needed
