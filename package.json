@@ -6,6 +6,7 @@
   "scripts": {
     "build": "hardhat compile && node scripts/abi.js",
     "deploy": "hardhat run scripts/deployDecompress.js",
+    "verify": "node verifier/op.js",
     "test": "hardhat test"
   },
   "keywords": [
@@ -20,7 +21,8 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "bn.js": "^5.2.0",
-    "ethers": "^5.5.4"
+    "ethers": "^5.5.4",
+    "pako": "^2.0.4"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.5",
