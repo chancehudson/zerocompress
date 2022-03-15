@@ -40,10 +40,11 @@ async function main() {
 
 	const end = await ethProvider.getBlockNumber();
 
+	let averageSavings = 0
+
 	let oBuffer = new Uint8Array([]);
 	let cBuffer = new Uint8Array([]);
 	let txsProcessed = 0;
-
 	for (let i = 500; i > 0; i--) {
 		const block = await ethProvider.getBlockWithTransactions(end - i);
 
@@ -51,89 +52,98 @@ async function main() {
 		// tx.v == 0.
 		// TODO: ethers throws invalid chainId error when v == 0 in
 		// serializeTransaction() fn
-		if (block.transactions.length == 0 || block.transactions[0].v == 0) {
-			continue;
-		}
+		for (const tx of block.transactions) {
+			if (tx.v == 0) continue
+			let oTx = {
+				to: tx.to,
+				nonce: tx.nonce,
+				gasLimit: tx.gasLimit,
+				gasPrice: tx.gasPrice,
+				data: tx.data,
+				value: tx.value,
+			};
+			let sig = {
+				v: tx.v,
+				r: tx.r,
+				s: tx.s,
+			};
+			// tx with compressed calldata
+			let cTx = {
+				...oTx,
+			};
 
-		let oTx = {
-			to: block.transactions[0].to,
-			nonce: block.transactions[0].nonce,
-			gasLimit: block.transactions[0].gasLimit,
-			gasPrice: block.transactions[0].gasPrice,
-			data: block.transactions[0].data,
-			value: block.transactions[0].value,
-		};
-		let sig = {
-			v: block.transactions[0].v,
-			r: block.transactions[0].r,
-			s: block.transactions[0].s,
-		};
-		// tx with compressed calldata
-		let cTx = {
-			...oTx,
-		};
-
-		// only compress if there's some data
-		if (oTx.data != "0x") {
-			const [func, data] = compress(oTx.data);
+			// only compress if there's some data
+			if (oTx.data == "0x") continue
+			const [func, data] = compress(oTx.data, {
+				addressSubs: {
+					'*': 129124
+				}
+			});
 			const decompressorI = new ethers.utils.Interface(DecompressAbi);
 			const compressedCalldata = decompressorI.encodeFunctionData(func, [
 				data,
 			]);
 			// only replace calldata in compressed tx if there's some savings
-			if (gasCost(compressedCalldata) <= gasCost(oTx.data)) {
+			if (gasCost(compressedCalldata) < gasCost(oTx.data)) {
 				cTx.data = compressedCalldata;
+				console.log(`compressed by ${gasCost(oTx.data) - gasCost(compressedCalldata)}`)
 			}
+
+			// serialize tx
+			// RLP encoding of serializeTransaction for
+			// legacy txs follows the same
+			// pattern as OPs RLP encoding of txData.
+			// Don't include chainId and type, since OPs
+			// txData does not contain them.
+			// Also prepend tx size of 3 bytes to encoded txData since OPs does it.
+			let oTxByteArr = new Uint8Array([
+				...numberTo3ByteUint8Arr(
+					ethers.utils.arrayify(
+						ethers.utils.serializeTransaction(oTx, sig)
+					).length
+				),
+				...ethers.utils.arrayify(
+					ethers.utils.serializeTransaction(oTx, sig)
+				),
+			]);
+			oBuffer = new Uint8Array([...oBuffer, ...oTxByteArr]);
+			let cTxByteArr = new Uint8Array([
+				...numberTo3ByteUint8Arr(
+					ethers.utils.arrayify(
+						ethers.utils.serializeTransaction(cTx, sig)
+					).length
+				),
+				...ethers.utils.arrayify(
+					ethers.utils.serializeTransaction(cTx, sig)
+				),
+			]);
+			cBuffer = new Uint8Array([...cBuffer, ...cTxByteArr]);
+			txsProcessed += 1;
+		}
+		// compress buffers
+		if (txsProcessed >= 100) {
+			txsProcessed = 0
+			oBufferC = pako.deflate(oBuffer);
+			cBufferC = pako.deflate(cBuffer);
+			console.log(oBuffer)
+			console.log(cBuffer)
+			console.log(`
+		        Transactions Processed: ${txsProcessed}
+			    Batch data without zlib:
+			        original     -  size=${oBuffer.length} bytes
+		                            gas cost=${gasCostByteArr(oBuffer)}
+			        zerocompress -  size=${cBuffer.length} bytes
+		                            gas cost=${gasCostByteArr(cBuffer)}
+			    Batch data with zlib:
+		            original     -  size=${oBufferC.length} bytes
+		                            gas cost=${gasCostByteArr(oBufferC)}
+			        zerocompress -  size=${cBufferC.length} bytes
+		                            gas cost=${gasCostByteArr(cBufferC)}
+			`);
 		}
 
-		// serialize tx
-		// RLP encoding of serializeTransaction for
-		// legacy txs follows the same
-		// pattern as OPs RLP encoding of txData.
-		// Don't include chainId and type, since OPs
-		// txData does not contain them.
-		// Also prepend tx size of 3 bytes to encoded txData since OPs does it.
-		let oTxByteArr = new Uint8Array([
-			...numberTo3ByteUint8Arr(
-				ethers.utils.arrayify(
-					ethers.utils.serializeTransaction(oTx, sig)
-				).length
-			),
-			...ethers.utils.arrayify(
-				ethers.utils.serializeTransaction(oTx, sig)
-			),
-		]);
-		oBuffer = new Uint8Array([...oBuffer, ...oTxByteArr]);
-		let cTxByteArr = new Uint8Array([
-			...numberTo3ByteUint8Arr(
-				ethers.utils.arrayify(
-					ethers.utils.serializeTransaction(cTx, sig)
-				).length
-			),
-			...ethers.utils.arrayify(
-				ethers.utils.serializeTransaction(cTx, sig)
-			),
-		]);
-		cBuffer = new Uint8Array([...cBuffer, ...cTxByteArr]);
-		txsProcessed += 1;
 	}
 
-	// compress buffers
-	oBufferC = pako.deflate(oBuffer);
-	cBufferC = pako.deflate(cBuffer);
-	console.log(`
-        Transactions Processed: ${txsProcessed}
-	    Batch data without zlib:
-	        original     -  size=${oBuffer.length} bytes
-                            gas cost=${gasCostByteArr(oBuffer)}
-	        zerocompress -  size=${cBuffer.length} bytes
-                            gas cost=${gasCostByteArr(cBuffer)}
-	    Batch data with zlib:
-            original     -  size=${oBufferC.length} bytes
-                            gas cost=${gasCostByteArr(oBufferC)}
-	        zerocompress -  size=${cBufferC.length} bytes
-                            gas cost=${gasCostByteArr(cBufferC)}
-	`);
 }
 
 main().catch((err) => {
