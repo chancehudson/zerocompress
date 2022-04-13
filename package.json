@@ -20,6 +20,7 @@
   "author": "Chance Hudson",
   "license": "GPL-3.0-or-later",
   "dependencies": {
+    "@jchancehud/parallel-promise": "^0.0.2",
     "bn.js": "^5.2.0",
     "ethers": "^5.5.4",
     "pako": "^2.0.4"
