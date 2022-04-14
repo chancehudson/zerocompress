@@ -9,15 +9,21 @@ Calldata in Ethereum is priced at 4 gas per zero byte, and 16 gas per non-zero b
 1. Zeroes are compressed to non-zeros with more than 75% efficiency
 2. Zeroes are not replaced with non-zeroes during compression
 
-### Single bit
+### Zerocompress
 
-Data is compressed by looking at each byte and storing a single bit indicating whether the byte is zero or non-zero. If the byte is non-zero it is added to a `uniques` array of bytes.
+There are 3 main structures in zerocompressed data.
 
-**Each sequence of 8 consecutive zero bytes is compressed to a single zero byte.**
+1. A config section specifying default values and lengths of the following sections
+2. A bits section storing a 1 for a non-zero byte and 0 for a zero byte
+3. A section of non-zero bytes
+
+This algorithm stores a 0 bit for each zero byte and a 1 bit for each non-zero byte in section 2. The non-zero byte is added to section 3 to be inserted during inflation. Inflation is done by iterating over each bit in section 2 and inserting either a zero byte or pulling and inserting the next non-zero byte from section 3.
+
+Using this strategy there should never be a 1 bit pointing to a 0 byte. This fact is used to implement opcodes for decompression, which can be seen below.
 
 ### Opcodes
 
-A zero value in the `uniques` array indicates a special operation. The byte following a zero byte in the `uniques` array specifies an opcode for inflation. Any number of following bytes may be used as an argument for the opcode.
+A zero value in the section 3 indicates a special operation. The byte following a zero byte specifies the opcode for inflation. Any number of trailing bytes may be used as argument(s) for the opcode.
 
 - [x] `0x00()` - zero insertion, insert a fixed number of zeroes specified by a number at register 1 (this number may be 0) (use this to make the total data length shorter to avoid padding)
 - [x] `0x01-0xE0` - Fixed length 0 insertion
