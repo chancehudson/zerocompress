@@ -11,7 +11,7 @@ Calldata in Ethereum is priced at 4 gas per zero byte, and 16 gas per non-zero b
 
 ### Zerocompress
 
-There are 3 main structures in zerocompressed data.
+There are 3 main structures in zerocompressed data:
 
 1. A config section specifying default values and lengths of the following sections
 2. A bits section storing a 1 for a non-zero byte and 0 for a zero byte
@@ -23,7 +23,7 @@ Using this strategy there should never be a 1 bit pointing to a 0 byte. This fac
 
 ### Opcodes
 
-A zero value in the section 3 indicates a special operation. The byte following a zero byte specifies the opcode for inflation. Any number of trailing bytes may be used as argument(s) for the opcode.
+A zero value in section 3 indicates a special operation. The byte following a zero byte specifies the opcode for inflation. Any number of trailing bytes may be used as argument(s) for the opcode.
 
 - [x] `0x00()` - zero insertion, insert a fixed number of zeroes specified by a number at register 1 (this number may be 0) (use this to make the total data length shorter to avoid padding)
 - [x] `0x01-0xE0` - Fixed length 0 insertion
